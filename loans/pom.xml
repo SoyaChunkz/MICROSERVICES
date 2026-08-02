@@ -133,13 +133,13 @@
                         docker ps
                         
                         6. View application logs
-                        docker logs loans
+                        docker logs name
                         
                         7. Stop the container
-                        docker stop loans
+                        docker stop name
                         
                         8. Remove the container
-                        docker rm loans
+                        docker rm name
                         
                         9. Remove the image
                         docker rmi soyachunkz/loans:latest
