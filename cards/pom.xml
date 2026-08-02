@@ -122,6 +122,53 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <!-- ============================================================
+                Steps to build and run this Spring Boot application
+                using Google Jib
+
+                1. Build the Docker image
+                mvn compile jib:dockerBuild
+
+                2. Verify the image
+                docker images
+
+                3. (Optional) Inspect the image
+                docker inspect soyachunkz/cards:latest
+
+                4. Run a container
+                docker run -d -p 8080:9000 soyachunkz/cards
+
+                5. Verify the running container
+                docker ps
+
+                6. View application logs
+                docker logs name
+
+                7. Stop the container
+                docker stop name
+
+                8. Remove the container
+                docker rm name
+
+                9. Remove the image
+                docker rmi soyachunkz/cards:latest
+
+                Note:
+                - Jib does NOT require a Dockerfile.
+                - Jib analyzes the Maven project, identifies the main class,
+                creates optimized OCI image layers, and builds the image
+                directly into the local Docker daemon.
+            ============================================================= -->
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <to>
+                        <image>soyachunkz/${project.artifactId}</image>
+                    </to>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
