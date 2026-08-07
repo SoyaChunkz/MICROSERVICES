@@ -3,17 +3,36 @@ spring:
   application:
     name: "configserver"
   profiles:
-    # 'native' profile reads configuration files from local resources
-    active: native
+#    # 'native' profile reads configuration files from local resources
+#    active: native
+    active: git
   cloud:
     config:
       server:
-        native:
-          # search-locations specify where the microservice configuration files are stored
-          search-locations:
-          - "classpath:/config/accounts"
-          - "classpath:/config/loans"
-          - "classpath:/config/cards"
+#        native:
+#          # search-locations specify where the microservice configuration files are stored
+#          search-locations:
+#          - "classpath:/config/accounts"
+#          - "classpath:/config/loans"
+#          - "classpath:/config/cards"
+        git:
+          # Git repository containing centralized configuration files
+          uri: https://github.com/SoyaChunkz/MICROSERVICES-CONFIG.git
+          username: SoyaChunkz
+          # GitHub Personal Access Token from environment variable
+          password: ${GITHUB_TOKEN}
+          # Branch to fetch configuration from
+          default-label: main
+          search-paths:
+            - accounts
+            - loans
+            - cards
+          # Maximum time (in seconds) to connect to the Git repository
+          timeout: 5
+          # Clone the repository during Config Server startup instead of on the first request
+          clone-on-start: true
+          # Always fetch the latest changes from the remote repository before serving configuration
+          force-pull: true
 
 server:
   port: 8071
