@@ -1,0 +1,19 @@
+# Configure this application as a Spring Cloud Config Server
+spring:
+  application:
+    name: "configserver"
+  profiles:
+    # 'native' profile reads configuration files from local resources
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # search-locations specify where the microservice configuration files are stored
+          search-locations:
+          - "classpath:/config/accounts"
+          - "classpath:/config/loans"
+          - "classpath:/config/cards"
+
+server:
+  port: 8071
