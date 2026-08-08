@@ -153,7 +153,10 @@
                 using Google Jib
 
                 1. Build the Docker image
-                mvn compile jib:dockerBuild
+                mvn clean install
+                mvn  jib:dockerBuild
+
+                mvn compile jib:dockerBuild //skips tests
 
                 2. Verify the image
                 docker images

@@ -1,0 +1,6 @@
+build:
+  version: test
+
+spring:
+  config:
+    import: "optional:configserver:http://localhost:8071/"
