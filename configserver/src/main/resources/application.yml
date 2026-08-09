@@ -27,6 +27,7 @@ spring:
             - accounts
             - loans
             - cards
+            - eurekaserver
           # Maximum time (in seconds) to connect to the Git repository
           timeout: 5
           # Clone the repository during Config Server startup instead of on the first request

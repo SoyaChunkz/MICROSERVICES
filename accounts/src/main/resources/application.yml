@@ -23,7 +23,28 @@ management:
   endpoints:
     web:
       exposure:
-        include: refresh
+        include: "*"
+  endpoint:
+    shutdown:
+      access: unrestricted
+  info:
+    env:
+      enabled: true
         
 server:
   port: 8080
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+info:
+  app:
+    name: "accounts"
+    description: "SammoBank Accounts Application"
+    version: "1.0.0"
