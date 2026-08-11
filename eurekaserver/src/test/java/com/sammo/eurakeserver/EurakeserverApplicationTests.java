@@ -1,10 +1,10 @@
-package com.sammo.eurakeserver;
+package com.sammo.eurekaserver;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class EurakeserverApplicationTests {
+class EurekaserverApplicationTests {
 
 	@Test
 	void contextLoads() {

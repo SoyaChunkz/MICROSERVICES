@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -71,7 +71,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Mohan\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\",\n    \"accountsDto\": {\n        \"accountNumber\": 1105557729,\n        \"accountType\": \"Savings\",\n        \"branchAddress\": \"123 Main Street, New York\"\n    }\n}",
+							"raw": "{\n    \"name\": \"Madan Mohan\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\",\n    \"accountsDto\": {\n        \"accountNumber\": 1105557729,\n        \"accountType\": \"Savings\",\n        \"branchAddress\": \"123 Main Street, New York\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -266,7 +266,7 @@
 						"method": "GET",
 						"header": [
 							{
-								"key": "eazybank-correlation-id",
+								"key": "sammobank-correlation-id",
 								"value": "43gtrt-trtrrtgf",
 								"type": "text"
 							}
@@ -746,7 +746,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "aishwarya@eazybank.com",
+							"raw": "aishwarya@sammobank.com",
 							"options": {
 								"raw": {
 									"language": "text"
@@ -849,7 +849,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes.com\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb.com\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -916,7 +916,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes.com\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb.com\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -924,14 +924,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/create",
+							"raw": "http://localhost:8072/sammobank/accounts/api/create",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"create"
@@ -946,14 +946,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/fetch?mobileNumber=4354437688",
+							"raw": "http://localhost:8072/sammobank/accounts/api/fetch?mobileNumber=4354437688",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"fetch"
@@ -969,13 +969,13 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/accounts/api/create",
+					"name": "sammobank/accounts/api/create",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -983,14 +983,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/create",
+							"raw": "http://localhost:8072/sammobank/accounts/api/create",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"create"
@@ -1000,7 +1000,7 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/cards/api/create",
+					"name": "sammobank/cards/api/create",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -1014,14 +1014,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/cards/api/create?mobileNumber=4354437687",
+							"raw": "http://localhost:8072/sammobank/cards/api/create?mobileNumber=4354437687",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"cards",
 								"api",
 								"create"
@@ -1037,19 +1037,19 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/loans/api/create",
+					"name": "sammobank/loans/api/create",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/loans/api/create?mobileNumber=4354437687",
+							"raw": "http://localhost:8072/sammobank/loans/api/create?mobileNumber=4354437687",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"loans",
 								"api",
 								"create"
@@ -1070,14 +1070,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/fetchCustomerDetails?mobileNumber=4354437687",
+							"raw": "http://localhost:8072/sammobank/accounts/api/fetchCustomerDetails?mobileNumber=4354437687",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"fetchCustomerDetails"
@@ -1093,19 +1093,19 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/accounts/api/contact-info",
+					"name": "sammobank/accounts/api/contact-info",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/contact-info",
+							"raw": "http://localhost:8072/sammobank/accounts/api/contact-info",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"contact-info"
@@ -1115,19 +1115,19 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/loans/api/contact-info",
+					"name": "sammobank/loans/api/contact-info",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/loans/api/contact-info",
+							"raw": "http://localhost:8072/sammobank/loans/api/contact-info",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"loans",
 								"api",
 								"contact-info"
@@ -1137,19 +1137,19 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/accounts/api/build-info",
+					"name": "sammobank/accounts/api/build-info",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/build-info",
+							"raw": "http://localhost:8072/sammobank/accounts/api/build-info",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"build-info"
@@ -1159,19 +1159,19 @@
 					"response": []
 				},
 				{
-					"name": "eazybank/accounts/api/java-version",
+					"name": "sammobank/accounts/api/java-version",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/java-version",
+							"raw": "http://localhost:8072/sammobank/accounts/api/java-version",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"java-version"
@@ -1200,7 +1200,7 @@
 								},
 								{
 									"key": "client_id",
-									"value": "eazybank-callcenter-cc",
+									"value": "sammobank-callcenter-cc",
 									"type": "text"
 								},
 								{
@@ -1244,14 +1244,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/contact-info",
+							"raw": "http://localhost:8072/sammobank/accounts/api/contact-info",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"contact-info"
@@ -1266,14 +1266,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/cards/api/java-version",
+							"raw": "http://localhost:8072/sammobank/cards/api/java-version",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"cards",
 								"api",
 								"java-version"
@@ -1288,14 +1288,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/loans/api/build-info",
+							"raw": "http://localhost:8072/sammobank/loans/api/build-info",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"loans",
 								"api",
 								"build-info"
@@ -1311,7 +1311,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1319,14 +1319,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/create",
+							"raw": "http://localhost:8072/sammobank/accounts/api/create",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"create"
@@ -1373,7 +1373,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-cc",
+									"value": "sammobank-callcenter-cc",
 									"type": "string"
 								},
 								{
@@ -1387,7 +1387,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437688\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437688\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1395,14 +1395,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/create",
+							"raw": "http://localhost:8072/sammobank/accounts/api/create",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"create"
@@ -1434,7 +1434,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-cc",
+									"value": "sammobank-callcenter-cc",
 									"type": "string"
 								},
 								{
@@ -1471,14 +1471,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/cards/api/create?mobileNumber=4354437688",
+							"raw": "http://localhost:8072/sammobank/cards/api/create?mobileNumber=4354437688",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"cards",
 								"api",
 								"create"
@@ -1511,7 +1511,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-cc",
+									"value": "sammobank-callcenter-cc",
 									"type": "string"
 								},
 								{
@@ -1544,14 +1544,14 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/loans/api/create?mobileNumber=4354437688",
+							"raw": "http://localhost:8072/sammobank/loans/api/create?mobileNumber=4354437688",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"loans",
 								"api",
 								"create"
@@ -1584,7 +1584,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-ac",
+									"value": "sammobank-callcenter-ac",
 									"type": "string"
 								},
 								{
@@ -1643,7 +1643,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1651,14 +1651,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/create",
+							"raw": "http://localhost:8072/sammobank/accounts/api/create",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"create"
@@ -1680,7 +1680,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-ac",
+									"value": "sammobank-callcenter-ac",
 									"type": "string"
 								},
 								{
@@ -1752,14 +1752,14 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8072/eazybank/cards/api/create?mobileNumber=4354437687",
+							"raw": "http://localhost:8072/sammobank/cards/api/create?mobileNumber=4354437687",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"cards",
 								"api",
 								"create"
@@ -1787,7 +1787,7 @@
 								},
 								{
 									"key": "clientId",
-									"value": "eazybank-callcenter-ac",
+									"value": "sammobank-callcenter-ac",
 									"type": "string"
 								},
 								{
@@ -1850,14 +1850,14 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/loans/api/create?mobileNumber=4354437687",
+							"raw": "http://localhost:8072/sammobank/loans/api/create?mobileNumber=4354437687",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"loans",
 								"api",
 								"create"
@@ -1878,14 +1878,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8072/eazybank/accounts/api/fetchCustomerDetails?mobileNumber=4354437688",
+							"raw": "http://localhost:8072/sammobank/accounts/api/fetchCustomerDetails?mobileNumber=4354437688",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "8072",
 							"path": [
-								"eazybank",
+								"sammobank",
 								"accounts",
 								"api",
 								"fetchCustomerDetails"
@@ -1912,7 +1912,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1940,7 +1940,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1968,7 +1968,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"Madan Reddy\",\n    \"email\": \"tutor@eazybytes\",\n    \"mobileNumber\": \"4354437687\"\n}",
+							"raw": "{\n    \"accountNumber\": 1234545454,\n    \"name\": \"sammo\",\n    \"email\": \"tutor@sb\",\n    \"mobileNumber\": \"4354437687\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"

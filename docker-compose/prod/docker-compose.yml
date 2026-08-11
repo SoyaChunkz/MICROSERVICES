@@ -44,7 +44,7 @@ services:
     image: "soyachunkz/configserver:latest"
     container_name: configserver-ms-prod
     ports:
-      - "8073:8071"
+      - "18071:8071"
     depends_on:
       rabbit:
         condition: service_healthy
@@ -61,58 +61,72 @@ services:
       SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME: ${GITHUB_USERNAME}
       SPRING_CLOUD_CONFIG_SERVER_GIT_PASSWORD: ${GITHUB_TOKEN}
 
+  eurekaserver:
+    image: "soyachunkz/eurekaserver:latest"
+    container_name: eurekaserver-ms-prod
+    ports:
+      - "18070:8070"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+    environment:
+      SPRING_APPLICATION_NAME: "eurekaserver"
+      EUREKA_INSTANCE_HOSTNAME: eurekaserver
+
   accounts:
     image: "soyachunkz/accounts:latest"
     container_name: accounts-ms-prod
     ports:
-      - "8083:8080"
+      - "18080:8080"
     environment:
       SPRING_APPLICATION_NAME: "accounts"
       SPRING_DATASOURCE_URL: "jdbc:mysql://accountsdb:3306/accountsdb"
     depends_on:
       accountsdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
   loans:
     image: "soyachunkz/loans:latest"
     container_name: loans-ms-prod
     ports:
-      - "8093:8090"
+      - "18090:8090"
     environment:
       SPRING_APPLICATION_NAME: "loans"
       SPRING_DATASOURCE_URL: "jdbc:mysql://loansdb:3306/loansdb"
     depends_on:
       loansdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
   cards:
     image: "soyachunkz/cards:latest"
     container_name: cards-ms-prod
     ports:
-      - "9003:9000"
+      - "19000:9000"
     environment:
       SPRING_APPLICATION_NAME: "cards"
       SPRING_DATASOURCE_URL: "jdbc:mysql://cardsdb:3306/cardsdb"
     depends_on:
       cardsdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
 networks:
   sammobank:
     driver: "bridge"
-

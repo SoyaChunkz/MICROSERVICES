@@ -23,18 +23,18 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 				description = "SammoBank Cards microservice REST API Documentation",
 				version = "v1",
 				contact = @Contact(
-						name = "Madan Reddy",
-						email = "tutor@eazybytes.com",
-						url = "https://www.eazybytes.com"
+						name = "sammo",
+						email = "tutor@sb.com",
+						url = "https://www.sb.com"
 				),
 				license = @License(
 						name = "Apache 2.0",
-						url = "https://www.eazybytes.com"
+						url = "https://www.sb.com"
 				)
 		),
 		externalDocs = @ExternalDocumentation(
 				description = "SammoBank Cards microservice REST API Documentation",
-				url = "https://www.eazybytes.com/swagger-ui.html"
+				url = ""
 		)
 )
 public class CardsApplication {

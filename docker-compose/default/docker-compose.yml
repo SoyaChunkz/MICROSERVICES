@@ -3,7 +3,7 @@ services:
   accountsdb:
     container_name: accountsdb-default
     ports:
-      - 3306:3306
+      - 13306:3306
     environment:
       MYSQL_DATABASE: accountsdb
     extends:
@@ -13,7 +13,7 @@ services:
   loansdb:
     container_name: loansdb-default
     ports:
-      - 3307:3306
+      - 23306:3306
     environment:
       MYSQL_DATABASE: loansdb
     extends:
@@ -23,7 +23,7 @@ services:
   cardsdb:
     container_name: cardsdb-default
     ports:
-      - 3308:3306
+      - 33306:3306
     environment:
       MYSQL_DATABASE: cardsdb
     extends:
@@ -67,6 +67,27 @@ services:
       SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME: ${GITHUB_USERNAME}
       SPRING_CLOUD_CONFIG_SERVER_GIT_PASSWORD: ${GITHUB_TOKEN}
 
+  eurekaserver:
+    image: "soyachunkz/eurekaserver:latest"
+    container_name: eurekaserver-ms
+    ports:
+      - "8070:8070"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+    environment:
+      SPRING_APPLICATION_NAME: "eurekaserver"
+      EUREKA_INSTANCE_HOSTNAME: eurekaserver
+
   accounts:
     image: "soyachunkz/accounts:latest"
     container_name: accounts-ms
@@ -78,11 +99,9 @@ services:
     depends_on:
       accountsdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
   loans:
     image: "soyachunkz/loans:latest"
@@ -95,11 +114,9 @@ services:
     depends_on:
       loansdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
   cards:
     image: "soyachunkz/cards:latest"
@@ -112,13 +129,10 @@ services:
     depends_on:
       cardsdb:
         condition: service_healthy
-      configserver:
-        condition: service_healthy
     extends:
       file: common-config.yml
-      service: microservice-configserver-config
+      service: microservice-eureka-config
 
 networks:
   sammobank:
     driver: "bridge"
-
