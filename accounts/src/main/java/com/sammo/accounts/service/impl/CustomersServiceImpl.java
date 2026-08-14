@@ -21,15 +21,16 @@ public class CustomersServiceImpl implements ICustomersService {
     private LoansFeignClient loansFeignClient;
 
     /**
-     * @param mobileNumber - Input Mobile Number
+     * @param mobileNumber  - Input Mobile Number
+     * @param correlationId - Correlation ID value generated at Edge server
      * @return Customer Details based on a given mobileNumber
      */
     @Override
-    public CustomerDetailsDto fetchCustomerDetails(String mobileNumber) {
+    public CustomerDetailsDto fetchCustomerDetails(String mobileNumber, String correlationId) {
 
         CustomerDto customerDto = accountsService.fetchAccount(mobileNumber);
-        ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFeignClient.fetchCardDetails(mobileNumber);
-        ResponseEntity<LoansDto> loansDtoResponseEntity = loansFeignClient.fetchLoanDetails(mobileNumber);
+        ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFeignClient.fetchCardDetails(correlationId, mobileNumber);
+        ResponseEntity<LoansDto> loansDtoResponseEntity = loansFeignClient.fetchLoanDetails(correlationId, mobileNumber);
 
         return CustomerDetailsDto.builder()
                 .customerDto(customerDto)
