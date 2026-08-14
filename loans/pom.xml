@@ -173,15 +173,28 @@
                         9. Remove the image
                         docker rmi soyachunkz/loans:latest
                     ============================================================= -->
-                    <image>
-                        <name>soyachunkz/${project.artifactId}</name>
-                    </image>
+<!--                    <image>-->
+<!--                        <name>soyachunkz/${project.artifactId}</name>-->
+<!--                    </image>-->
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <from>
+                        <image>docker://soyachunkz/java25-curl:latest</image>
+                    </from>
+                    <to>
+                        <image>soyachunkz/${project.artifactId}:latest</image>
+                    </to>
                 </configuration>
             </plugin>
         </plugins>

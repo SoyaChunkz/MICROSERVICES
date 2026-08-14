@@ -88,8 +88,11 @@
 				<artifactId>jib-maven-plugin</artifactId>
 				<version>3.5.2</version>
 				<configuration>
+					<from>
+						<image>docker://soyachunkz/java25-curl:latest</image>
+					</from>
 					<to>
-						<image>soyachunkz/${project.artifactId}</image>
+						<image>soyachunkz/${project.artifactId}:latest</image>
 					</to>
 				</configuration>
 			</plugin>

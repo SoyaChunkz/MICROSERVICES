@@ -7,18 +7,20 @@
 - Spring Boot
 - Spring Cloud Config Server
 - Eureka Service Discovery
+- Spring Cloud Gateway
 - OpenFeign
 - MySQL
 - RabbitMQ
 - Docker
 - Docker Compose
+- Google Jib
 
 The services are designed to communicate through service discovery rather than relying on hardcoded service addresses.
 
 ### Architecture
 Current architecture up to Eureka Service Discovery:
 ```
-
+```text
                          ┌─────────────────────┐
                          │    Config Server    │
                          │       :8071         │
@@ -28,6 +30,12 @@ Current architecture up to Eureka Service Discovery:
                          ┌─────────────────────┐
                          │   Eureka Server     │
                          │       :8070         │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │    Gateway Server   │
+                         │       :9090         │
                          └──────────┬──────────┘
                                     │
                  ┌──────────────────┼──────────────────┐
@@ -119,6 +127,27 @@ Cards uses Jib for building its Docker image.
 .\mvnw.cmd jib:dockerBuild
 ```
 
+#### Update!!!
+All application modules use Google Jib to build Docker images.
+
+Jib builds the Docker image directly from the Maven project without requiring a Dockerfile for each application.
+
+#### Custom Java 25 + CURL Base Image
+
+Services that require curl for Docker healthchecks use the custom base image:
+```docker 
+soyachunkz/java25-curl:latest
+```
+The base image is built once from:
+```docker
+docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
+```
+
+If the image is being used across different machines or environments, push it to Docker Hub:
+```docker
+docker push soyachunkz/java25-curl:latest
+```
+
 ### Docker Compose
 ```docker 
 docker compose -f docker-compose/default/docker-compose.yml up
@@ -133,27 +162,50 @@ Eureka is used as the service registry.
 The microservices register themselves with Eureka:
 
 ```
-Accounts ──┐
-Loans ─────┼──→ Eureka Server :8070
-Cards ─────┘
+        Accounts ──┐
+        Loans ─────┼──→ Eureka Server :8070
+        Cards ─────┘
 ```
 
 Services can then discover other services using their registered service name instead of relying on fixed IP addresses.
+
+### Gateway Server
+
+Spring Cloud Gateway acts as the entry point for client requests.
+
+```
+        Client
+        │
+        ▼
+        Gateway Server :9090
+        │
+        ├── /sammobank/accounts/** → Accounts
+        ├── /sammobank/loans/**    → Loans
+        └── /sammobank/cards/**    → Cards
+```
+
+The Gateway uses Eureka service discovery and Spring Cloud LoadBalancer to locate the target services.
 
 ### Configuration Server
 
 The Config Server centralizes configuration for the microservices.
 
 ```
-Config Server
-│
-├── Accounts
-├── Loans
-├── Cards
-└── Eureka Server
+        Config Server
+        │
+        ├── Accounts
+        ├── Loans
+        ├── Cards
+        └── Eureka Server
 ```
 
 The services retrieve their environment-specific configuration from the Config Server.
 
 Config Git Repo: [https://github.com/SoyaChunkz/MICROSERVICES-CONFIG]
+
+### Docker Base Image for Curl
+```docker 
+docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
+```
+
 
