@@ -6,9 +6,14 @@
 
 - Spring Boot
 - Spring Cloud Config Server
-- Eureka Service Discovery
+- Spring Cloud Eureka Service Discovery
 - Spring Cloud Gateway
-- OpenFeign
+- Spring Cloud OpenFeign
+- Spring Cloud Bus
+- Spring Boot Actuator
+- Spring Boot Validation
+- Spring Data JPA
+- Springdoc OpenAPI
 - MySQL
 - RabbitMQ
 - Docker
