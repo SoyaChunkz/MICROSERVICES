@@ -1,38 +1,36 @@
+# updated this compose for local setup
 services:
-  accounts:
-    image: "soyachunkz/accounts:latest"
-    container_name: accounts-ms
-    ports:
-      - "8080:8080"
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sammobank
-  loans:
-    image: "soyachunkz/loans:latest"
-    container_name: loans-ms
-    ports:
-      - "8090:8090"
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sammobank
-  cards:
-    image: "soyachunkz/cards:latest"
-    container_name: cards-ms
-    ports:
-      - "9000:9000"
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sammobank
 
-networks:
-  sammobank:
-    driver: "bridge"
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  accountsdb:
+    image: mysql
+    container_name: accountsdb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: accountsdb
+    ports:
+      - "13306:3306"
+
+  loansdb:
+    image: mysql
+    container_name: loansdb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: loansdb
+    ports:
+      - "23306:3306"
+
+  cardsdb:
+    image: mysql
+    container_name: cardsdb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cardsdb
+    ports:
+      - "33306:3306"

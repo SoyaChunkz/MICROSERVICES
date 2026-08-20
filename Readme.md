@@ -97,6 +97,12 @@ Check running containers:
 ```docker  
 docker ps
 ```
+#### Update!!!
+
+Use the docker compose present in the root dir for local setup to run these containers for local setup with a single command.
+```docker 
+docker compose up
+```
 
 
 ### Maven Build
@@ -179,14 +185,29 @@ Services can then discover other services using their registered service name in
 Spring Cloud Gateway acts as the entry point for client requests.
 
 ```
-        Client
-        │
-        ▼
-        Gateway Server :9090
-        │
-        ├── /sammobank/accounts/** → Accounts
-        ├── /sammobank/loans/**    → Loans
-        └── /sammobank/cards/**    → Cards
+                         Client
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   Gateway   │
+                    │    :9090    │
+                    ├─────────────┤
+                    │   Routing   │
+                    │   Logging   │
+                    │ Correlation │
+                    └──────┬──────┘
+                           │
+             ┌─────────────┼─────────────┐
+             ▼             ▼             ▼
+         Accounts        Loans         Cards
+             │
+             │ Feign
+             ├────────────────→ Cards
+             │
+             └────────────────→ Loans
+                    │
+                    ▼
+              Aggregated CustomerDetails
 ```
 
 The Gateway uses Eureka service discovery and Spring Cloud LoadBalancer to locate the target services.

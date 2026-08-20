@@ -254,6 +254,8 @@ public class LoansController {
     )
     @GetMapping("/contact-info")
     public ResponseEntity<LoansContactInfoDto> getContactInfo() {
+        logger.info("Invoked Loans contact-info API");
+//        throw new RuntimeException(); // for testing Retry Mechanism for Loans MS defined in Gateway server
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(loansContactInfoDto);

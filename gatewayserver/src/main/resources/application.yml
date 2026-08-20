@@ -11,6 +11,9 @@ spring:
             locator:
               enabled: false
               lowerCaseServiceId: true
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 10s
 
 management:
   endpoints:
@@ -35,3 +38,11 @@ logging:
     com:
       sammo:
         gatewayserver: DEBUG
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 10 # Resilience4j looks at the last 10 calls when calculating the failure rate.
+      failureRateThreshold: 50 # If the failure rate reaches 50%, the circuit can transition to OPEN.
+      waitDurationInOpenState: 10000 # During these 10 seconds, calls are rejected by the circuit before allowing a transition to HALF-OPEN.
+      permittedNumberOfCallsInHalfOpenState: 2 # When the 10 seconds are over, the circuit becomes: HALF-OPEN, it will allow 2 test calls to check whether the service has recovered.

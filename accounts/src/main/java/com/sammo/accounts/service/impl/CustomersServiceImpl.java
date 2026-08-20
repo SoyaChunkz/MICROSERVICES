@@ -9,9 +9,11 @@ import com.sammo.accounts.service.ICustomersService;
 import com.sammo.accounts.service.client.CardsFeignClient;
 import com.sammo.accounts.service.client.LoansFeignClient;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class CustomersServiceImpl implements ICustomersService {
@@ -31,6 +33,9 @@ public class CustomersServiceImpl implements ICustomersService {
         CustomerDto customerDto = accountsService.fetchAccount(mobileNumber);
         ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFeignClient.fetchCardDetails(correlationId, mobileNumber);
         ResponseEntity<LoansDto> loansDtoResponseEntity = loansFeignClient.fetchLoanDetails(correlationId, mobileNumber);
+
+        if (cardsDtoResponseEntity.getStatusCode().is5xxServerError()) log.info("Cards MS is unavailable, returning customer details without card details");
+        if (loansDtoResponseEntity.getStatusCode().is5xxServerError()) log.info("Loans MS is unavailable, returning customer details without loan details");
 
         return CustomerDetailsDto.builder()
                 .customerDto(customerDto)
