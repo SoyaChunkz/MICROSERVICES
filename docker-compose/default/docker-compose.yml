@@ -1,11 +1,256 @@
 services:
 
+  # Loki Read Component:
+  # Handles read/query operations for Loki.
+  # Grafana and other clients use this component to retrieve logs stored in the Loki storage backend.
+  read:
+    image: grafana/loki:3.6.2
+    command: "-config.file=/etc/loki/config.yaml -target=read"
+    ports:
+      - 3101:3100
+      - 7946
+      - 9095
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minio
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: &loki-dns
+      sammobank:
+        aliases:
+          - loki
+
+  # Loki Write Component:
+  # Handles incoming log data and writes it to Loki's storage backend.
+  # Alloy sends the collected application logs through the Loki gateway to this component.
+  write:
+    image: grafana/loki:3.6.2
+    command: "-config.file=/etc/loki/config.yaml -target=write"
+    ports:
+      - 3102:3100
+      - 7946
+      - 9095
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - minio
+    networks:
+      <<: *loki-dns
+
+  # Grafana Alloy:
+  # Acts as the telemetry collector for the application.
+  # It discovers Docker containers, collects their logs, and forwards them to Loki for centralized log storage and querying.
+  alloy:
+    image: grafana/alloy:v1.12.0
+    volumes:
+      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - 12345:12345
+    depends_on:
+      - gateway
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # MinIO:
+  # Provides object storage for Loki.
+  # Loki uses MinIO to persist log data and ruler information outside the Loki containers.
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler && \
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=loki
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_UPDATE=off
+    ports:
+      - 9000
+    volumes:
+      - ./.data/minio:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # Prometheus:
+  # Collects and stores application metrics exposed by Spring Boot services through Actuator and Micrometer.
+  # Grafana uses Prometheus as a datasource to visualize these metrics.
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # Grafana Tempo:
+  # Acts as the distributed tracing backend for the application.
+  # OpenTelemetry-enabled Spring Boot services send trace data to Tempo,
+  # where traces are stored and made available for querying and visualization through Grafana.
+  tempo:
+    image: grafana/tempo:2.9.0
+    container_name: tempo
+    command: -config.file /etc/tempo-config.yml
+    ports:
+      - "3110:3100"
+      - "4318:4318"
+    volumes:
+      - ../observability/tempo/tempo.yml:/etc/tempo-config.yml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # Grafana:
+  # Provides the visualization and monitoring dashboard for the system.
+  # It connects to Prometheus for metrics and Loki for logs, allowing application health, performance, and logs to be monitored in one place.
+  grafana:
+    image: grafana/grafana:12.3.0
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    depends_on:
+      - gateway
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        /run.sh
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # Loki Backend Component:
+  # Handles background and administrative operations for the Loki cluster, such as log compaction and other backend tasks.
+  # It works alongside the read and write components rather than directly serving application requests.
+  backend:
+    image: grafana/loki:3.6.2
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    ports:
+      - "3100"
+      - "7946"
+    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+    depends_on:
+      - gateway
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # Loki Gateway:
+  # NGINX acts as the single entry point for Loki requests.
+  # It routes log write requests to the Loki write component and log query/read requests to the Loki read component.
+  gateway:
+    image: nginx:1.29.3
+    depends_on:
+      - read
+      - write
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/nginx/nginx.conf
+        user  nginx;
+        worker_processes  5;  ## Default: 1
+
+        events {
+          worker_connections   1000;
+        }
+
+        http {
+          resolver 127.0.0.11;
+
+          server {
+            listen             3100;
+
+            location = / {
+              return 200 'OK';
+              auth_basic off;
+            }
+
+            location = /api/prom/push {
+              proxy_pass       http://write:3100\$$request_uri;
+            }
+
+            location = /api/prom/tail {
+              proxy_pass       http://read:3100\$$request_uri;
+              proxy_set_header Upgrade \$$http_upgrade;
+              proxy_set_header Connection "upgrade";
+            }
+
+            location ~ /api/prom/.* {
+              proxy_pass       http://read:3100\$$request_uri;
+            }
+
+            location = /loki/api/v1/push {
+              proxy_pass       http://write:3100\$$request_uri;
+            }
+
+            location = /loki/api/v1/tail {
+              proxy_pass       http://read:3100\$$request_uri;
+              proxy_set_header Upgrade \$$http_upgrade;
+              proxy_set_header Connection "upgrade";
+            }
+
+            location ~ /loki/api/.* {
+              proxy_pass       http://read:3100\$$request_uri;
+            }
+          }
+        }
+        EOF
+        /docker-entrypoint.sh nginx -g "daemon off;"
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: [ "CMD", "service", "nginx", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
   accountsdb:
     container_name: accountsdb-default
     ports:
       - 13306:3306
     environment:
       MYSQL_DATABASE: accountsdb
+    volumes:
+      - ../observability/mysql/init/create-exporter-user.sql:/docker-entrypoint-initdb.d/create-exporter-user.sql
     extends:
       file: common-config.yml
       service: microservice-db-config
@@ -16,6 +261,8 @@ services:
       - 23306:3306
     environment:
       MYSQL_DATABASE: loansdb
+    volumes:
+      - ../observability/mysql/init/create-exporter-user.sql:/docker-entrypoint-initdb.d/create-exporter-user.sql
     extends:
       file: common-config.yml
       service: microservice-db-config
@@ -26,9 +273,31 @@ services:
       - 33306:3306
     environment:
       MYSQL_DATABASE: cardsdb
+    volumes:
+      - ../observability/mysql/init/create-exporter-user.sql:/docker-entrypoint-initdb.d/create-exporter-user.sql
     extends:
       file: common-config.yml
       service: microservice-db-config
+
+  # MySQL Exporter:
+  # Exposes MySQL database metrics in Prometheus format.
+  # A single exporter instance is used to monitor the Accounts, Loans, and Cards MySQL databases.
+  # Prometheus scrapes the exporter, which queries the configured MySQL targets and exposes their health and performance metrics.
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.19.0
+    volumes:
+      - ../observability/mysql/exporter/config.my-cnf:/.my.cnf:ro
+    ports:
+      - "9104:9104"
+    command:
+      - "--config.my-cnf=/.my.cnf"
+    depends_on:
+      - accountsdb
+      - loansdb
+      - cardsdb
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
 
   rabbit:
     image: rabbitmq:4-management
@@ -56,9 +325,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
-      interval: 10s
+      interval: 20s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     extends:
       file: common-config.yml
@@ -66,6 +335,7 @@ services:
     environment:
       SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME: ${GITHUB_USERNAME}
       SPRING_CLOUD_CONFIG_SERVER_GIT_PASSWORD: ${GITHUB_TOKEN}
+      OTEL_SERVICE_NAME: "configserver"
 
   eurekaserver:
     image: "soyachunkz/eurekaserver:latest"
@@ -77,9 +347,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
-      interval: 10s
+      interval: 20s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     extends:
       file: common-config.yml
@@ -87,6 +357,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: "eurekaserver"
       EUREKA_INSTANCE_HOSTNAME: eurekaserver
+      OTEL_SERVICE_NAME: "eurekaserver"
 
   accounts:
     image: "soyachunkz/accounts:latest"
@@ -96,14 +367,15 @@ services:
     environment:
       SPRING_APPLICATION_NAME: "accounts"
       SPRING_DATASOURCE_URL: "jdbc:mysql://accountsdb:3306/accountsdb"
+      OTEL_SERVICE_NAME: "accounts"
     depends_on:
       accountsdb:
         condition: service_healthy
     healthcheck:
       test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1"
-      interval: 10s
+      interval: 20s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     extends:
       file: common-config.yml
@@ -117,14 +389,15 @@ services:
     environment:
       SPRING_APPLICATION_NAME: "loans"
       SPRING_DATASOURCE_URL: "jdbc:mysql://loansdb:3306/loansdb"
+      OTEL_SERVICE_NAME: "loans"
     depends_on:
       loansdb:
         condition: service_healthy
     healthcheck:
       test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1"
-      interval: 10s
+      interval: 20s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     extends:
       file: common-config.yml
@@ -138,14 +411,15 @@ services:
     environment:
       SPRING_APPLICATION_NAME: "cards"
       SPRING_DATASOURCE_URL: "jdbc:mysql://cardsdb:3306/cardsdb"
+      OTEL_SERVICE_NAME: "cards"
     depends_on:
       cardsdb:
         condition: service_healthy
     healthcheck:
       test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1"
-      interval: 10s
+      interval: 20s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     extends:
       file: common-config.yml
@@ -165,6 +439,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "gatewayserver"
+      OTEL_SERVICE_NAME: "gatewayserver"
     extends:
       file: common-config.yml
       service: microservice-eureka-config

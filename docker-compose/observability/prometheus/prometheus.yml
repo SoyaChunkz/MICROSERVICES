@@ -1,0 +1,73 @@
+global:
+  scrape_interval:     5s # Set the scrape interval to every 5 seconds.
+  evaluation_interval: 5s # Evaluate rules every 5 seconds.
+
+scrape_configs:
+
+  # Spring Boot services
+  - job_name: 'accounts'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'accounts:8080' ]
+  - job_name: 'loans'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'loans:8090' ]
+  - job_name: 'cards'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'cards:9000' ]
+  - job_name: 'gatewayserver'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'gatewayserver:9090' ]
+  - job_name: 'eurekaserver'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'eurekaserver:8070' ]
+  - job_name: 'configserver'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'configserver:8071' ]
+
+  # MySQL
+  - job_name: 'mysql'
+    metrics_path: /probe
+    static_configs:
+      - targets:
+          - accountsdb:3306
+          - loansdb:3306
+          - cardsdb:3306
+
+    # Relabeling is required because Prometheus does not scrape the MySQL databases directly.
+    # The targets above represent the actual MySQL containers that need to be monitored.
+    # These rules transform each database target into a request to the single mysqld-exporter.
+    #
+    # 1. __address__ (accountsdb:3306) is copied to __param_target, creating:
+    #    /probe?target=accountsdb:3306
+    #
+    # 2. __param_target is copied to the "instance" label so Grafana/Prometheus can
+    #    identify which database the metrics belong to.
+    #
+    # 3. __address__ is then replaced with mysql-exporter:9104, so Prometheus sends
+    #    the scrape request to the exporter instead of directly to MySQL.
+    #
+    # Final flow:
+    #  Take the original DB address
+    #  → store it as the exporter target parameter
+    #  → copy it to instance for labeling
+    #  → replace the actual scrape address with the exporter.
+    #
+    #    Prometheus → mysql-exporter:9104/probe?target=accountsdb:3306 → Accounts DB
+    #    Prometheus → mysql-exporter:9104/probe?target=loansdb:3306   → Loans DB
+    #    Prometheus → mysql-exporter:9104/probe?target=cardsdb:3306   → Cards DB
+
+    relabel_configs:
+      - source_labels: [ __address__ ]
+        target_label: __param_target
+
+      - source_labels: [ __param_target ]
+        target_label: instance
+
+      - target_label: __address__
+        replacement: mysql-exporter:9104

@@ -11,3 +11,6 @@ Thumbs.db
 
 # Environment variables / secrets
 .env
+
+# Observability persistent data
+docker-compose/default/.data/

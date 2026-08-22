@@ -235,3 +235,36 @@ docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
 ```
 
 
+```
+                    ┌──────────────┐
+                    │ Spring Boot  │
+                    │ Microservices│
+                    └──────┬───────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+             Logs        Metrics       Traces
+              │            │            │
+              ▼            ▼            ▼
+            Alloy      Prometheus     OpenTelemetry
+              │            ▲            │
+              ▼            │            ▼
+             Loki    MySQL Exporter    Tempo
+              │            ▲            │
+              │            │            │
+              └────────────┼────────────┘
+                           ▼
+                        Grafana
+                        
+                        
+            Accounts DB ──┐
+            Loans DB ─────┼──→ MySQL Exporter ──→ Prometheus ──→ Grafana
+            Cards DB ─────┘
+            
+            
+  Gateway ──→ Accounts ──→ Cards
+    │            │
+    │            └──────→ Loans
+    │
+    └── OpenTelemetry ──→ Tempo ──→ Grafana
+```
