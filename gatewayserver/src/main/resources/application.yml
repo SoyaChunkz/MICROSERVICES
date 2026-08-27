@@ -14,6 +14,13 @@ spring:
       httpclient:
         connect-timeout: 1000
         response-timeout: 10s
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # jwk-set-uri tells the Gateway where to fetch Keycloak's public keys, which Spring Security then uses to verify the JWT's signature.
+          # The public key is needed to determine whether the token was actually signed by Keycloak and hasn't been tampered with.
+          jwk-set-uri: "http://localhost:8180/realms/sammobank/protocol/openid-connect/certs"
 
 management:
   endpoints:

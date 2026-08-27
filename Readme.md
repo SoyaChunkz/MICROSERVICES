@@ -268,3 +268,63 @@ docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
     │
     └── OpenTelemetry ──→ Tempo ──→ Grafana
 ```
+
+### OAuth2 Security with Keycloak
+
+This section implements OAuth2-based authentication and authorization in the microservices architecture using **Keycloak** as the Authorization Server and the **Gateway Server** as an OAuth2 Resource Server.
+
+#### OAuth2 Grant Types
+
+A grant type describes how a client obtains an access token.
+
+We implemented/learned two important flows:
+
+1. Client Credentials Grant
+2. Authorization Code Grant
+
+In Local dev env, Keycloak is running as a Docker container.
+```docker 
+docker run -p 127.0.0.1:8180:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.7.2 start-dev
+```
+
+```
+                        KEYCLOAK
+                  Authorization Server
+                           │
+            ┌──────────────┴────────────────┐
+            │                               │
+            │                               │
+        AC Client                       CC Client
+   sammobank-callcenter-ac         sammobank-callcenter-cc
+            │                               │
+            │                               │
+        User Flow                      Service Flow
+            │                               │
+        sammo user                    Service Account
+            │                               │
+            └──────────────┬────────────────┘
+                           │
+                          JWT
+                           │
+                           ▼
+                  ┌──────────────────────┐
+                  │       GATEWAY        │
+                  │   Resource Server    │
+                  │                      │
+                  │  Spring Security     │
+                  └──────────┬───────────┘
+                      JWT validation
+                             │
+                       `kid` → JWK
+                             │
+                    Public key verification
+                             │
+                       Extract roles
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+          ACCOUNTS         CARDS           LOANS
+              │              │              │
+              ▼              ▼              ▼
+          Accounts MS      Cards MS       Loans MS
+```
