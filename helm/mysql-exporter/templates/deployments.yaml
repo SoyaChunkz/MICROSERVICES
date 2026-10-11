@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-exporter
+  labels:
+    app: mysql-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-exporter
+  template:
+    metadata:
+      labels:
+        app: mysql-exporter
+    spec:
+      containers:
+        - name: mysql-exporter
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: 9104
+          args:
+            - "--config.my-cnf=/.my.cnf"
+          volumeMounts:
+            - name: exporter-config
+              mountPath: /.my.cnf
+              subPath: .my.cnf
+      volumes:
+        - name: exporter-config
+          configMap:
+            name: mysql-exporter-config

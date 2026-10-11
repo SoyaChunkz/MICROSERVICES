@@ -13,6 +13,8 @@ public interface AccountsRepository extends JpaRepository<Accounts, Long> {
 
     Optional<Accounts> findByCustomerId(Long customerId);
 
+    boolean existsByAccountNumber(Long accountNumber);
+
     @Transactional
     @Modifying
     void deleteByCustomerId(Long customerId);

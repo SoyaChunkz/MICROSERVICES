@@ -75,9 +75,11 @@ public class CardsController {
     )
     @PostMapping("/create")
     public ResponseEntity<ResponseDto> createCard(@Valid @RequestParam
-                                                      @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                      @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                       String mobileNumber) {
+        logger.info("POST /api/create received for mobile number {}", mobileNumber);
         iCardsService.createCard(mobileNumber);
+        logger.info("POST /api/create completed for mobile number {}", mobileNumber);
             return ResponseEntity
                     .status(HttpStatus.CREATED)
                     .body(new ResponseDto(CardsConstants.STATUS_201, CardsConstants.MESSAGE_201));
@@ -102,7 +104,7 @@ public class CardsController {
     })
     @GetMapping("/fetch")
     public ResponseEntity<CardsDto> fetchCardDetails(@RequestHeader("sammobank-correlation-id") String correlationId,
-                                                     @RequestParam @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits") String mobileNumber) {
+                                                     @RequestParam @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits") String mobileNumber) {
         logger.debug("fetchCardDetails method start");
         CardsDto cardsDto = iCardsService.fetchCard(mobileNumber);
         logger.debug("fetchCardDetails method end");
@@ -132,6 +134,7 @@ public class CardsController {
         })
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateCardDetails(@Valid @RequestBody CardsDto cardsDto) {
+        logger.info("PUT /api/update received for card {}", cardsDto.getCardNumber());
         boolean isUpdated = iCardsService.updateCard(cardsDto);
         if(isUpdated) {
             return ResponseEntity
@@ -167,8 +170,9 @@ public class CardsController {
     })
     @DeleteMapping("/delete")
     public ResponseEntity<ResponseDto> deleteCardDetails(@RequestParam
-                                                                @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                                @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                                 String mobileNumber) {
+        logger.info("DELETE /api/delete received for mobile number {}", mobileNumber);
         boolean isDeleted = iCardsService.deleteCard(mobileNumber);
         if(isDeleted) {
             return ResponseEntity
@@ -201,6 +205,7 @@ public class CardsController {
     )
     @GetMapping("/build-info")
     public ResponseEntity<String> getBuildInfo() {
+        logger.debug("GET /api/build-info invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(buildVersion);
@@ -226,6 +231,7 @@ public class CardsController {
     )
     @GetMapping("/java-version")
     public ResponseEntity<String> getJavaVersion() {
+        logger.debug("GET /api/java-version invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(environment.getProperty("JAVA_HOME"));
@@ -251,6 +257,7 @@ public class CardsController {
     )
     @GetMapping("/contact-info")
     public ResponseEntity<CardsContactInfoDto> getContactInfo() {
+        logger.info("GET /api/contact-info invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(cardsContactInfoDto);

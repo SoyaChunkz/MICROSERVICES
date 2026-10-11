@@ -1,0 +1,29 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.7.2"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8180
+  targetPort: 8080
+
+admin:
+  username: admin
+  password: admin
+
+# Keycloak command arguments
+# Use "start-dev" for development mode
+command:
+  - start-dev
+  - --import-realm
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi

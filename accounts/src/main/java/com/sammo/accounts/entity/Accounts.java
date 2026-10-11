@@ -1,8 +1,6 @@
 package com.sammo.accounts.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -26,4 +24,7 @@ public class Accounts extends  BaseEntity {
     @Column(name="branch_address")
     private String branchAddress;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "communication_status")
+    private CommunicationStatus communicationStatus;
 }

@@ -1,0 +1,42 @@
+{{- range .Values.databases }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}-deployment
+  labels:
+    app: {{ .name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: mysql:8.4
+          ports:
+            - containerPort: {{ .port }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "{{ .rootPassword }}"
+            - name: MYSQL_DATABASE
+              value: "{{ .database }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+spec:
+  selector:
+    app: {{ .name }}
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: {{ .port }}
+      targetPort: {{ .port }}
+{{- end }}

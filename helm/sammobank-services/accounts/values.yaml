@@ -1,0 +1,34 @@
+deploymentName: accounts-deployment
+serviceName: accounts
+appLabel: accounts
+appName: accounts
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/accounts
+  tag: latest
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Controls which environment variables are added
+appname_enabled: true
+profile_enabled: true
+config_enabled: true
+eureka_enabled: true
+resourceserver_enabled: false
+database_enabled: true
+otel_enabled: true
+kafka_enabled: true
+mail_credentials_enabled: false
+
+# Database configuration
+database:
+  configMapKey: ACCOUNTS_DATASOURCE_URL
+  usernameConfigMapKey: ACCOUNTS_DATASOURCE_USERNAME
+  passwordConfigMapKey: ACCOUNTS_DATASOURCE_PASSWORD

@@ -1,0 +1,28 @@
+deploymentName: gatewayserver-deployment
+serviceName: gatewayserver
+appLabel: gatewayserver
+appName: gatewayserver
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/gatewayserver
+  tag: latest
+
+containerPort: 9090
+
+service:
+  type: LoadBalancer
+  port: 9090
+  targetPort: 9090
+
+appname_enabled: true
+profile_enabled: true
+config_enabled: true
+eureka_enabled: true
+resourceserver_enabled: true
+database_enabled: false
+github_secret_enabled: false
+otel_enabled: true
+kafka_enabled: false
+mail_credentials_enabled: false

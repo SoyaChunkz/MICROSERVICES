@@ -57,11 +57,12 @@ public class CustomerController {
     @GetMapping("/fetchCustomerDetails")
     public ResponseEntity<CustomerDetailsDto> fetchCustomerDetails(@RequestHeader("sammobank-correlation-id") String correlationId,
                                                                    @RequestParam
-                                                                   @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                                   @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                                    String mobileNumber){
-        logger.debug("fetchCustomerDetails method start");
+        logger.info("GET /api/fetchCustomerDetails received for mobile number {} and correlation id {}",
+                mobileNumber, correlationId);
         CustomerDetailsDto customerDetailsDto = iCustomersService.fetchCustomerDetails(mobileNumber, correlationId);
-        logger.debug("fetchCustomerDetails method end");
+        logger.info("GET /api/fetchCustomerDetails completed for mobile number {}", mobileNumber);
         return ResponseEntity.status(HttpStatus.SC_OK).body(customerDetailsDto);
     }
 

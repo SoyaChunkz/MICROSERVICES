@@ -1,0 +1,28 @@
+deploymentName: configserver-deployment
+serviceName: configserver
+appLabel: configserver
+appName: configserver
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/configserver
+  tag: latest
+
+containerPort: 8071
+
+service:
+  type: ClusterIP
+  port: 8071
+  targetPort: 8071
+
+appname_enabled: true
+profile_enabled: false
+config_enabled: false
+eureka_enabled: false
+resourceserver_enabled: false
+database_enabled: false
+otel_enabled: true
+kafka_enabled: false
+github_secret_enabled: true
+mail_credentials_enabled: false

@@ -1,0 +1,6 @@
+dependencies:
+- name: sammobank-common
+  repository: file://../../sammobank-common
+  version: 0.1.0
+digest: sha256:3082d6dba10288de84474c81efbb0db38689f1da6ab5d3639a328452c4567810
+generated: "2026-09-26T22:01:02.0322924+05:30"

@@ -71,7 +71,9 @@ public class AccountsController {
     })
     @PostMapping("/create")
     public ResponseEntity<ResponseDto> createAccount(@Valid @RequestBody CustomerDto customerDto) {
+        log.info("POST /api/create received for mobile number {}", customerDto.getMobileNumber());
         iAccountsService.createAccount(customerDto);
+        log.info("POST /api/create completed for mobile number {}", customerDto.getMobileNumber());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto(AccountsConstants.STATUS_201, AccountsConstants.MESSAGE_201));
@@ -96,8 +98,9 @@ public class AccountsController {
     })
     @GetMapping("/fetch")
     public ResponseEntity<CustomerDto> fetchAccountDetails(@RequestParam
-                                                           @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                           @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                            String mobileNumber) {
+        log.info("GET /api/fetch received for mobile number {}", mobileNumber);
         CustomerDto customerDto = iAccountsService.fetchAccount(mobileNumber);
         return ResponseEntity.status(HttpStatus.OK).body(customerDto);
     }
@@ -126,6 +129,7 @@ public class AccountsController {
     )
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateAccountDetails(@Valid @RequestBody CustomerDto customerDto) {
+        log.info("PUT /api/update received for mobile number {}", customerDto.getMobileNumber());
         boolean isUpdated = iAccountsService.updateAccount(customerDto);
         if(isUpdated) {
             return ResponseEntity
@@ -162,8 +166,9 @@ public class AccountsController {
     )
     @DeleteMapping("/delete")
     public ResponseEntity<ResponseDto> deleteAccountDetails(@RequestParam
-                                                            @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                            @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                             String mobileNumber) {
+        log.info("DELETE /api/delete received for mobile number {}", mobileNumber);
         boolean isDeleted = iAccountsService.deleteAccount(mobileNumber);
         if(isDeleted) {
             return ResponseEntity
@@ -229,6 +234,7 @@ public class AccountsController {
     )
     @GetMapping("/java-version")
     public ResponseEntity<String> getJavaVersion() {
+        log.debug("GET /api/java-version invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(environment.getProperty("JAVA_HOME"));

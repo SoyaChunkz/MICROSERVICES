@@ -1,0 +1,28 @@
+deploymentName: eurekaserver-deployment
+serviceName: eurekaserver
+appLabel: eurekaserver
+appName: eurekaserver
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/eurekaserver
+  tag: latest
+
+containerPort: 8070
+
+service:
+  type: ClusterIP
+  port: 8070
+  targetPort: 8070
+
+appname_enabled: true
+profile_enabled: false
+config_enabled: true
+eureka_enabled: false
+resourceserver_enabled: false
+database_enabled: false
+github_secret_enabled: false
+otel_enabled: true
+kafka_enabled: false
+mail_credentials_enabled: false

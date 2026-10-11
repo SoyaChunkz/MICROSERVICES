@@ -13,4 +13,5 @@ public interface LoansRepository extends JpaRepository<Loans, Long> {
 
     Optional<Loans> findByLoanNumber(String loanNumber);
 
+    boolean existsByLoanNumber(String loanNumber);
 }

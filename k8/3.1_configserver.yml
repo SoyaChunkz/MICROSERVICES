@@ -1,0 +1,120 @@
+# ============================================================
+# CONFIG SERVER - DEPLOYMENT
+# ============================================================
+
+# Kubernetes API version for Deployment
+apiVersion: apps/v1
+
+# We are creating a Deployment
+kind: Deployment
+
+# Metadata about the Deployment itself
+metadata:
+  # Name of the Deployment
+  name: configserver-deployment
+
+  # Labels attached to the Deployment object
+  labels:
+    app: configserver
+
+# ============================================================
+# DEPLOYMENT SPEC
+# ============================================================
+spec:
+
+  # Number of Pod replicas we want
+  replicas: 1
+
+  # Tells the Deployment which Pods it manages
+  # It looks for Pods having the label app=configserver
+  selector:
+    matchLabels:
+      app: configserver
+
+  # ==========================================================
+  # POD TEMPLATE
+  # ==========================================================
+  # This is the blueprint used to create the Pod
+  template:
+
+    # Metadata belonging to the Pod
+    metadata:
+
+      # Label that will be attached to the Pod
+      labels:
+        app: configserver
+
+    # ========================================================
+    # POD SPEC
+    # ========================================================
+    spec:
+      containers:
+
+        # Container running inside the Pod
+        - name: configserver
+
+          # Docker image used to create the container
+          image: soyachunkz/configserver:latest
+
+          env:
+            - name: GITHUB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: configserver-secret
+                  key: GITHUB_USERNAME
+
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: configserver-secret
+                  key: GITHUB_TOKEN
+
+          # Port on which the application inside the container
+          # is listening
+          ports:
+            - containerPort: 8071
+
+
+# ============================================================
+# CONFIG SERVER - SERVICE
+# ============================================================
+
+# Separate Kubernetes resource
+---
+apiVersion: v1
+
+# We are creating a Service
+kind: Service
+
+# Metadata about the Service
+metadata:
+
+  # Name of the Service
+  # Other Pods can use this name to reach Config Server
+  name: configserver
+
+# ============================================================
+# SERVICE SPEC
+# ============================================================
+spec:
+
+  # Service finds the Config Server Pod using this label
+  # It sends traffic to Pods having app=configserver
+  selector:
+    app: configserver
+
+  # Service type
+  # Exposes the Service using a LoadBalancer
+  type: LoadBalancer
+
+  # Port configuration
+  ports:
+
+    # Network protocol
+    - protocol: TCP
+
+      # Port exposed by the Service
+      port: 8071
+
+      # Port on the selected Pod that receives the traffic
+      targetPort: 8071

@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: message
+  cloud:
+    function:
+#      definition: email|sms
+      definition: email;sms
+    stream:
+      bindings:
+#        emailsms-in-0:
+#          destination: send-communication
+#          group: ${spring.application.name}
+          email-in-0:
+            destination: send-communication
+            group: email-service
+          email-out-0:
+            destination: communication-sent
+
+          sms-in-0:
+            destination: send-communication
+            group: sms-service
+          sms-out-0:
+            destination: communication-sent
+      kafka:
+        binder:
+          brokers:
+            - localhost:9092
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+#  rabbitmq:
+#    host: localhost
+#    port: 5672
+#    username: guest
+#    password: guest
+#    connection-timeout: 10s
+
+server:
+  port: 9010

@@ -328,3 +328,140 @@ docker run -p 127.0.0.1:8180:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOO
               ▼              ▼              ▼
           Accounts MS      Cards MS       Loans MS
 ```
+
+| Concept                     | 🐇 RabbitMQ                                  | 🟠 Kafka                                              |
+| --------------------------- | -------------------------------------------- | ----------------------------------------------------- |
+| Main destination            | **Exchange**                                 | **Topic**                                             |
+| Consumers receive through   | **Queues**                                   | **Consumer Groups**                                   |
+| Your first destination      | `send-communication` **exchange**            | `send-communication` **topic**                        |
+| Email processing            | `email-service` **queue** → `email()`        | `email-service` **consumer group** → `email()`        |
+| SMS processing              | `sms-service` **queue** → `sms()`            | `sms-service` **consumer group** → `sms()`            |
+| Result destination          | `communication-sent` **exchange**            | `communication-sent` **topic**                        |
+| Accounts processing         | Accounts **queue** → `updateCommunication()` | Accounts **consumer group** → `updateCommunication()` |
+| Message storage             | Mainly queue-based delivery                  | Messages remain in topic partitions for retention     |
+| Same message to email + SMS | Separate queues bound to exchange            | Separate consumer groups                              |
+
+
+``` 
+                                RABBITMQ
+                                    │
+                                Accounts
+                                    │
+                                    │ sendCommunication()
+                                    ▼
+                        ┌──────────────────────────────┐
+                        │ send-communication EXCHANGE  │
+                        └──────────────┬───────────────┘
+                                       │
+                                ┌──────┴──────┐
+                                ▼             ▼
+                         ┌─────────────┐ ┌────────────┐
+                         │email-service│ │ sms-service│
+                         │   QUEUE     │ │   QUEUE    │
+                         └──────┬──────┘ └──────┬─────┘
+                                │              │
+                                ▼              ▼
+                              email()        sms()
+                                │              │
+                                └──────┬───────┘
+                                       ▼
+                        ┌──────────────────────────────┐
+                        │ communication-sent EXCHANGE  │
+                        └──────────────┬───────────────┘
+                                       │
+                                       ▼
+                               ┌────────────────┐
+                               │ Accounts QUEUE │
+                               └───────┬────────┘
+                                       ▼
+                           updateCommunication()
+                                       │
+                                       ▼
+                                  Update DB
+                                  
+----------------------------------------------------------------------------------------------------------
+
+                                  KAFKA
+                                    │
+                                Accounts
+                                    │
+                                    │ sendCommunication()
+                                    ▼
+                        ┌──────────────────────────────┐
+                        │ send-communication  TOPIC    │
+                        └──────────────┬───────────────┘
+                                       │
+                                ┌──────┴──────┐
+                                ▼             ▼
+                         ┌──────────────┐ ┌──────────────┐
+                         │email-service │ │ sms-service  │
+                         │ CONSUMER     │ │ CONSUMER     │
+                         │    GROUP     │ │    GROUP     │
+                         └──────┬───────┘ └──────┬───────┘
+                                │                │
+                                ▼                ▼
+                              email()          sms()
+                                │                │
+                                └────────┬───────┘
+                                         ▼
+                        ┌──────────────────────────────┐
+                        │ communication-sent  TOPIC    │
+                        └──────────────┬───────────────┘
+                                       │
+                                       ▼
+                              ┌──────────────────┐
+                              │ Accounts CONSUMER│
+                              │      GROUP       │
+                              └────────┬─────────┘
+                                       ▼
+                           updateCommunication()
+                                       │
+                                       ▼
+                                  Update DB
+```
+
+```
+kubectl port-forward -n kubernetes-dashboard svc/kubernetes-dashboard-kong-proxy 8443:443
+
+kubectl create token admin-user -n kubernetes-dashboard
+
+kubectl create configmap keycloak-realm-config --from-file=sammobank-realm.json=../docker-compose/keycloak/realm/sammobank-realm.json
+```
+
+```
+kubectl apply -f .\3.2_configserver-secret.yml 
+
+
+# 1. Databases
+helm install databases .\sammobank-databases\
+
+# 2. Keycloak
+helm install keycloak .\keycloak\
+
+# 3. Kafka
+helm install kafka .\kafka\
+
+# 4. SammoBank microservices
+helm install dev-env .\environments\dev-env\
+
+# 5. MySQL Exporter
+helm install mysql-exporter .\mysql-exporter\
+
+# 6. Prometheus
+helm install kube-prometheus .\kube-prometheus\
+
+# 7. Loki + MinIO
+helm install grafana-loki .\grafana-loki\
+
+# 8. Grafana Alloy
+helm install grafana-alloy .\grafana-alloy\
+
+# 9. Tempo
+helm install grafana-tempo .\grafana-tempo\
+
+# 10. Grafana
+helm install grafana .\grafana\
+
+kubectl port-forward svc/keycloak 8180:8180
+```
+

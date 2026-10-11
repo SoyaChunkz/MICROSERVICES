@@ -1,0 +1,15 @@
+databases:
+  - name: accountsdb
+    database: accountsdb
+    rootPassword: root
+    port: 3306
+
+  - name: loansdb
+    database: loansdb
+    rootPassword: root
+    port: 3306
+
+  - name: cardsdb
+    database: cardsdb
+    rootPassword: root
+    port: 3306

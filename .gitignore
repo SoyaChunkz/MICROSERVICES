@@ -11,6 +11,21 @@ Thumbs.db
 
 # Environment variables / secrets
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# GITHUB CREDENTIALS SECRET
+k8/3.2_configserver-secret.yml
+
+Credentials and private keys
+*.pem
+*.key
+*.p12
+*.jks
+
+Local logs
+*.log
 
 # Observability persistent data
 docker-compose/default/.data/

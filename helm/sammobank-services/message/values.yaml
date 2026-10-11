@@ -1,0 +1,28 @@
+deploymentName: message-deployment
+serviceName: message
+appLabel: message
+appName: message
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/message
+  tag: latest
+
+containerPort: 9010
+
+service:
+  type: ClusterIP
+  port: 9010
+  targetPort: 9010
+
+appname_enabled: true
+profile_enabled: false
+config_enabled: false
+eureka_enabled: false
+resourceserver_enabled: false
+database_enabled: false
+github_secret_enabled: false
+otel_enabled: false
+kafka_enabled: true
+mail_credentials_enabled: true

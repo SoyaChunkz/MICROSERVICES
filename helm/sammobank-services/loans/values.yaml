@@ -1,0 +1,32 @@
+deploymentName: loans-deployment
+serviceName: loans
+appLabel: loans
+appName: loans
+
+replicaCount: 1
+
+image:
+  repository: soyachunkz/loans
+  tag: latest
+
+containerPort: 8090
+
+service:
+  type: ClusterIP
+  port: 8090
+  targetPort: 8090
+
+appname_enabled: true
+profile_enabled: true
+config_enabled: true
+eureka_enabled: true
+resourceserver_enabled: false
+database_enabled: true
+otel_enabled: true
+kafka_enabled: true
+mail_credentials_enabled: false
+
+database:
+  configMapKey: LOANS_DATASOURCE_URL
+  usernameConfigMapKey: LOANS_DATASOURCE_USERNAME
+  passwordConfigMapKey: LOANS_DATASOURCE_PASSWORD

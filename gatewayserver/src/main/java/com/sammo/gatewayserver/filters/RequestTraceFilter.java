@@ -34,7 +34,15 @@ public class RequestTraceFilter implements GlobalFilter {
         }
         else logger.debug("sammobank-correlation-id found in RequestTraceFilter: {}", correlationId);
 
-        return chain.filter(exchange);
+        String requestCorrelationId = correlationId;
+        ServerWebExchange tracedExchange = exchange;
+        logger.info("Gateway request started: {} {} [{}]",
+                tracedExchange.getRequest().getMethod(), tracedExchange.getRequest().getURI().getPath(), requestCorrelationId);
+        return chain.filter(tracedExchange)
+                .doOnSuccess(ignored -> logger.info("Gateway request completed: {} {} [{}]",
+                        tracedExchange.getRequest().getMethod(), tracedExchange.getRequest().getURI().getPath(), requestCorrelationId))
+                .doOnError(error -> logger.error("Gateway request failed: {} {} [{}]",
+                        tracedExchange.getRequest().getMethod(), tracedExchange.getRequest().getURI().getPath(), requestCorrelationId, error));
 
     }
 

@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    stream:
+      default-binder: test
+
+  mail:
+    host: localhost
+    port: 1025
+    username: user
+    password: password

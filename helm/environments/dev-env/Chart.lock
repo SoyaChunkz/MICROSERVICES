@@ -1,0 +1,27 @@
+dependencies:
+- name: sammobank-common
+  repository: file://../../sammobank-common
+  version: 0.1.0
+- name: configserver
+  repository: file://../../sammobank-services/configserver
+  version: 0.1.0
+- name: eurekaserver
+  repository: file://../../sammobank-services/eurekaserver
+  version: 0.1.0
+- name: accounts
+  repository: file://../../sammobank-services/accounts
+  version: 0.1.0
+- name: cards
+  repository: file://../../sammobank-services/cards
+  version: 0.1.0
+- name: loans
+  repository: file://../../sammobank-services/loans
+  version: 0.1.0
+- name: gatewayserver
+  repository: file://../../sammobank-services/gatewayserver
+  version: 0.1.0
+- name: message
+  repository: file://../../sammobank-services/message
+  version: 0.1.0
+digest: sha256:b6f8c4736fc1ef25a911001a00e01f5719124a8de379ff4f51f5e32848716a80
+generated: "2026-09-26T20:32:40.3725727+05:30"

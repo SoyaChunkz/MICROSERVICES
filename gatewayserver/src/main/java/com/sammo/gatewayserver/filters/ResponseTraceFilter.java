@@ -27,6 +27,8 @@ public class ResponseTraceFilter {
                                 logger.debug("Adding correlation id to outbound response headers: {}", correlationId);
                                 exchange.getResponse().getHeaders().set(FilterUtility.CORRELATION_ID, correlationId);
                             }
+                            logger.info("Gateway response completed with status {} [{}]",
+                                    exchange.getResponse().getStatusCode(), correlationId);
                         }));
     }
 }

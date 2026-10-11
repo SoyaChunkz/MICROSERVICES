@@ -76,9 +76,11 @@ public class LoansController {
     )
     @PostMapping("/create")
     public ResponseEntity<ResponseDto> createLoan(@RequestParam
-                                                      @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                      @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                       String mobileNumber) {
+        logger.info("POST /api/create received for mobile number {}", mobileNumber);
         iLoansService.createLoan(mobileNumber);
+        logger.info("POST /api/create completed for mobile number {}", mobileNumber);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto(LoansConstants.STATUS_201, LoansConstants.MESSAGE_201));
@@ -104,7 +106,7 @@ public class LoansController {
     )
     @GetMapping("/fetch")
     public ResponseEntity<LoansDto> fetchLoanDetails(@RequestHeader("sammobank-correlation-id") String correlationId,
-                                                     @RequestParam @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits") String mobileNumber) {
+                                                     @RequestParam @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits") String mobileNumber) {
         logger.debug("fetchLoanDetails method start");
         LoansDto loansDto = iLoansService.fetchLoan(mobileNumber);
         logger.debug("fetchLoanDetails method end");
@@ -135,6 +137,7 @@ public class LoansController {
     )
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateLoanDetails(@Valid @RequestBody LoansDto loansDto) {
+        logger.info("PUT /api/update received for loan {}", loansDto.getLoanNumber());
         boolean isUpdated = iLoansService.updateLoan(loansDto);
         if(isUpdated) {
             return ResponseEntity
@@ -171,8 +174,9 @@ public class LoansController {
     )
     @DeleteMapping("/delete")
     public ResponseEntity<ResponseDto> deleteLoanDetails(@RequestParam
-                                                                @Pattern(regexp="(^$|[0-9]{10})",message = "Mobile number must be 10 digits")
+                                                                @Pattern(regexp="[0-9]{10}",message = "Mobile number must be 10 digits")
                                                                 String mobileNumber) {
+        logger.info("DELETE /api/delete received for mobile number {}", mobileNumber);
         boolean isDeleted = iLoansService.deleteLoan(mobileNumber);
         if(isDeleted) {
             return ResponseEntity
@@ -205,6 +209,7 @@ public class LoansController {
     )
     @GetMapping("/build-info")
     public ResponseEntity<String> getBuildInfo() {
+        logger.debug("GET /api/build-info invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(buildVersion);
@@ -230,6 +235,7 @@ public class LoansController {
     )
     @GetMapping("/java-version")
     public ResponseEntity<String> getJavaVersion() {
+        logger.debug("GET /api/java-version invoked");
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(environment.getProperty("JAVA_HOME"));
