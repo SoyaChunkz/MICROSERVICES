@@ -1,0 +1,213 @@
+
+# Workflow name displayed in the GitHub Actions tab.
+name: SammoBank CI/CD
+
+# Trigger the workflow for pull requests, pushes to main, or manual runs.
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Grant only read access to repository contents by default.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # Job 1: Identify which services are affected by the changes.
+  detect-changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+
+    # Expose detected changes so later jobs can decide what to build and publish.
+    outputs:
+      accounts: ${{ steps.filter.outputs.accounts }}
+      cards: ${{ steps.filter.outputs.cards }}
+      loans: ${{ steps.filter.outputs.loans }}
+      gatewayserver: ${{ steps.filter.outputs.gatewayserver }}
+      eurekaserver: ${{ steps.filter.outputs.eurekaserver }}
+      configserver: ${{ steps.filter.outputs.configserver }}
+      message: ${{ steps.filter.outputs.message }}
+      application_changed: ${{ steps.filter.outputs.application_changed }}
+      shared_base_changed: ${{ steps.filter.outputs.shared_base_changed }}
+
+    steps:
+      # Download the repository contents onto the runner.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Check which paths changed compared with the base branch or previous commit.
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            # A service is affected by changes to its own directory.
+            # A shared base-image change affects every service.
+            accounts:
+              - 'accounts/**'
+              - 'docker/java25-curl/**'
+            cards:
+              - 'cards/**'
+              - 'docker/java25-curl/**'
+            loans:
+              - 'loans/**'
+              - 'docker/java25-curl/**'
+            gatewayserver:
+              - 'gatewayserver/**'
+              - 'docker/java25-curl/**'
+            eurekaserver:
+              - 'eurekaserver/**'
+              - 'docker/java25-curl/**'
+            configserver:
+              - 'configserver/**'
+              - 'docker/java25-curl/**'
+            message:
+              - 'message/**'
+              - 'docker/java25-curl/**'
+
+            # Used to skip builds when only documentation or unrelated files change.
+            application_changed:
+              - 'accounts/**'
+              - 'cards/**'
+              - 'loans/**'
+              - 'gatewayserver/**'
+              - 'eurekaserver/**'
+              - 'configserver/**'
+              - 'message/**'
+              - 'docker/java25-curl/**'
+
+            # Indicates that the shared runtime base image has changed.
+            shared_base_changed:
+              - 'docker/java25-curl/**'
+
+  # Job 2: Compile and test all seven services when application code changes.
+  # This helps catch regressions in services other than the one directly modified.
+  build-and-test:
+    name: Build and test all services
+    needs: detect-changes
+
+    # Run for application changes or an explicit manual workflow run.
+    if: needs.detect-changes.outputs.application_changed == 'true' || github.event_name == 'workflow_dispatch'
+
+    runs-on: ubuntu-latest
+
+    # Each service gets its own independent job.
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - accounts
+          - cards
+          - loans
+          - gatewayserver
+          - eurekaserver
+          - configserver
+          - message
+
+    steps:
+      # Check out the source code for the current service build.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install JDK 25 for compilation and testing.
+      # Maven Wrapper downloads the Maven distribution configured by each service.
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
+
+      # Linux runners require the Maven Wrapper script to be executable.
+      - name: Make Maven Wrapper executable
+        working-directory: ${{ matrix.service }}
+        run: chmod +x mvnw
+
+      # Compile the application, run tests, and perform Maven verification checks.
+      - name: Build and test
+        working-directory: ${{ matrix.service }}
+        run: ./mvnw -B -ntp clean verify
+
+  # Job 3: Publish container images to Docker Hub after successful verification.
+  publish-images:
+    name: Publish ${{ matrix.service }} image
+    needs:
+      - detect-changes
+      - build-and-test
+
+    # Never publish images for pull requests.
+    # Publish only for pushes to main when application code has changed.
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.application_changed == 'true' && needs.build-and-test.result == 'success' }}
+    runs-on: ubuntu-latest
+
+    # Define the service and its corresponding change-detection output.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: accounts
+            changed: ${{ needs.detect-changes.outputs.accounts }}
+          - service: cards
+            changed: ${{ needs.detect-changes.outputs.cards }}
+          - service: loans
+            changed: ${{ needs.detect-changes.outputs.loans }}
+          - service: gatewayserver
+            changed: ${{ needs.detect-changes.outputs.gatewayserver }}
+          - service: eurekaserver
+            changed: ${{ needs.detect-changes.outputs.eurekaserver }}
+          - service: configserver
+            changed: ${{ needs.detect-changes.outputs.configserver }}
+          - service: message
+            changed: ${{ needs.detect-changes.outputs.message }}
+
+    steps:
+      # Skip publishing when this service has not changed.
+      - name: Skip unchanged service
+        if: matrix.changed != 'true'
+        run: echo "No changes detected for ${{ matrix.service }}. Skipping image publishing."
+
+      # Only check out source code when the service needs an image.
+      - name: Checkout repository
+        if: matrix.changed == 'true'
+        uses: actions/checkout@v4
+
+      # Jib uses Java and Maven to package the application image.
+      - name: Set up Java 25
+        if: matrix.changed == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
+
+      # Make the service's Maven Wrapper executable on Linux.
+      - name: Make Maven Wrapper executable
+        if: matrix.changed == 'true'
+        working-directory: ${{ matrix.service }}
+        run: chmod +x mvnw
+
+      # Authenticate with Docker Hub using repository secrets.
+      # The credentials must be configured in GitHub repository settings.
+      - name: Log in to Docker Hub
+        if: matrix.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Use the full Git commit SHA as an immutable image tag.
+      # Skip tests here because the build-and-test job has already verified the code.
+      # Override the POM's default image name and tag through the Jib command line.
+      - name: Build and push image
+        if: matrix.changed == 'true'
+        working-directory: ${{ matrix.service }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: ./mvnw -B -ntp -DskipTests jib:build -Dimage=soyachunkz/${{ matrix.service }}:${IMAGE_TAG}
