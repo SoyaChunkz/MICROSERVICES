@@ -226,6 +226,12 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
+
+      # Linux runners require the Maven Wrapper script to be executable.
+      - name: Make Maven Wrapper executable
+        working-directory: ${{ matrix.service }}
+        run: chmod +x mvnw
 
       # Run the service's own Maven wrapper.
       #
@@ -300,6 +306,12 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
+
+      # Linux runners require the Maven Wrapper script to be executable.
+      - name: Make Maven Wrapper executable
+        working-directory: ${{ matrix.service }}
+        run: chmod +x mvnw
 
       # Authenticate to Docker Hub using GitHub repository secrets.
       # Never put the Docker Hub token directly in this file.
