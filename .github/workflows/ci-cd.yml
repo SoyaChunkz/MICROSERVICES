@@ -1,102 +1,199 @@
 
-# Workflow name displayed in the GitHub Actions tab.
+# ============================================================
+# SammoBank CI/CD Pipeline
+# ============================================================
+# CI  = Continuous Integration: build and test the services.
+# CD  = Continuous Delivery: publish service images to Docker Hub.
+#
+# Services: accounts, cards, loans, gatewayserver, eurekaserver, configserver, message
+#
+# Image publishing uses a Git tag as a checkpoint:
+#   ci/last-published
+#
+# The checkpoint moves forward only after all required images have been published successfully.
+# ============================================================
+
 name: SammoBank CI/CD
 
-# Trigger the workflow for pull requests, pushes to main, or manual runs.
+# ------------------------------------------------------------
+# 1. WHEN SHOULD THIS WORKFLOW RUN?
+# ------------------------------------------------------------
 on:
+  # Validate pull requests targeting main.
   pull_request:
     branches:
       - main
+
+  # Run CI/CD when commits are pushed to main.
   push:
     branches:
       - main
+
+  # Allow manually starting the workflow from GitHub Actions.
   workflow_dispatch:
 
-# Grant only read access to repository contents by default.
+# ------------------------------------------------------------
+# 2. WORKFLOW-LEVEL PERMISSIONS
+# ------------------------------------------------------------
+# Use read-only repository access by default.
+# The checkpoint-update job gets write permission separately.
 permissions:
   contents: read
   pull-requests: read
 
+# ------------------------------------------------------------
+# 3. CONTROL CONCURRENT WORKFLOW RUNS
+# ------------------------------------------------------------
+# Serialize runs for the same Git ref.
+#
+# If a newer run replaces an older pending run, the next run still compares against the last successful checkpoint.
+# Therefore, pending service changes are not lost.
+concurrency:
+  group: sambobank-ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # Job 1: Identify which services are affected by the changes.
+
+  # ==========================================================
+  # JOB 1: DETECT PENDING SERVICE CHANGES
+  # ==========================================================
+  # Compare the current commit against the last successfully published commit.
+  #
+  # If no checkpoint exists, treat all services as pending.
+  # If the shared Java base image changes, all services are considered pending because they use that base image.
+  # ==========================================================
   detect-changes:
-    name: Detect changed services
+    name: Detect pending changes
     runs-on: ubuntu-latest
 
-    # Expose detected changes so later jobs can decide what to build and publish.
     outputs:
-      accounts: ${{ steps.filter.outputs.accounts }}
-      cards: ${{ steps.filter.outputs.cards }}
-      loans: ${{ steps.filter.outputs.loans }}
-      gatewayserver: ${{ steps.filter.outputs.gatewayserver }}
-      eurekaserver: ${{ steps.filter.outputs.eurekaserver }}
-      configserver: ${{ steps.filter.outputs.configserver }}
-      message: ${{ steps.filter.outputs.message }}
-      application_changed: ${{ steps.filter.outputs.application_changed }}
-      shared_base_changed: ${{ steps.filter.outputs.shared_base_changed }}
+      accounts: ${{ steps.changes.outputs.accounts }}
+      cards: ${{ steps.changes.outputs.cards }}
+      loans: ${{ steps.changes.outputs.loans }}
+      gatewayserver: ${{ steps.changes.outputs.gatewayserver }}
+      eurekaserver: ${{ steps.changes.outputs.eurekaserver }}
+      configserver: ${{ steps.changes.outputs.configserver }}
+      message: ${{ steps.changes.outputs.message }}
+      application_changed: ${{ steps.changes.outputs.application_changed }}
+      shared_base_changed: ${{ steps.changes.outputs.shared_base_changed }}
 
     steps:
-      # Download the repository contents onto the runner.
-      - name: Checkout repository
+      # Download the complete Git history so we can compare commits.
+      - name: Checkout repository history
         uses: actions/checkout@v4
-
-      # Check which paths changed compared with the base branch or previous commit.
-      - name: Detect changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
         with:
-          filters: |
-            # A service is affected by changes to its own directory.
-            # A shared base-image change affects every service.
-            accounts:
-              - 'accounts/**'
-              - 'docker/java25-curl/**'
-            cards:
-              - 'cards/**'
-              - 'docker/java25-curl/**'
-            loans:
-              - 'loans/**'
-              - 'docker/java25-curl/**'
-            gatewayserver:
-              - 'gatewayserver/**'
-              - 'docker/java25-curl/**'
-            eurekaserver:
-              - 'eurekaserver/**'
-              - 'docker/java25-curl/**'
-            configserver:
-              - 'configserver/**'
-              - 'docker/java25-curl/**'
-            message:
-              - 'message/**'
-              - 'docker/java25-curl/**'
+          fetch-depth: 0
 
-            # Used to skip builds when only documentation or unrelated files change.
-            application_changed:
-              - 'accounts/**'
-              - 'cards/**'
-              - 'loans/**'
-              - 'gatewayserver/**'
-              - 'eurekaserver/**'
-              - 'configserver/**'
-              - 'message/**'
-              - 'docker/java25-curl/**'
+      # Find every service with changes since the last successful publish.
+      - name: Detect unpublished changes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
 
-            # Indicates that the shared runtime base image has changed.
-            shared_base_changed:
-              - 'docker/java25-curl/**'
+          BASELINE_TAG="ci/last-published"
 
-  # Job 2: Compile and test all seven services when application code changes.
-  # This helps catch regressions in services other than the one directly modified.
+          SERVICES=(
+            accounts
+            cards
+            loans
+            gatewayserver
+            eurekaserver
+            configserver
+            message
+          )
+
+          # Fetch the latest main branch and available Git tags.
+          git fetch origin main --tags
+
+          # ----------------------------------------------------
+          # First run: no successful-publish checkpoint exists.
+          # Publish all seven services to establish a baseline.
+          # ----------------------------------------------------
+          if ! git rev-parse -q --verify \
+            "refs/tags/${BASELINE_TAG}" >/dev/null; then
+
+            echo "No publishing checkpoint found."
+            echo "All services will be treated as pending."
+
+            for service in "${SERVICES[@]}"; do
+              echo "${service}=true" >> "$GITHUB_OUTPUT"
+            done
+
+            echo "application_changed=true" >> "$GITHUB_OUTPUT"
+            echo "shared_base_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The checkpoint points to the last commit whose required images were published successfully.
+          BASELINE=$(git rev-parse "refs/tags/${BASELINE_TAG}")
+
+          # Compare all files between that commit and this run.
+          CHANGED_FILES=$(git diff --name-only "$BASELINE" "$GITHUB_SHA")
+
+          echo "Checkpoint: ${BASELINE_TAG}"
+          echo "Baseline commit: ${BASELINE}"
+          echo "Current commit: ${GITHUB_SHA}"
+
+          # ----------------------------------------------------
+          # Check whether the shared Java base image changed.
+          # Every service must be rebuilt if it did.
+          # ----------------------------------------------------
+          SHARED_BASE_CHANGED=false
+          APPLICATION_CHANGED=false
+
+          if grep -q '^docker/java25-curl/' <<< "$CHANGED_FILES"; then
+            SHARED_BASE_CHANGED=true
+            APPLICATION_CHANGED=true
+          fi
+
+          # ----------------------------------------------------
+          # Detect changes separately for each microservice.
+          # ----------------------------------------------------
+          for service in "${SERVICES[@]}"; do
+
+            if [[ "$SHARED_BASE_CHANGED" == "true" ]] ||
+               grep -q "^${service}/" <<< "$CHANGED_FILES"; then
+
+              echo "${service}=true" >> "$GITHUB_OUTPUT"
+              APPLICATION_CHANGED=true
+
+              echo "Pending service: ${service}"
+
+            else
+              echo "${service}=false" >> "$GITHUB_OUTPUT"
+            fi
+
+          done
+
+          # Tell downstream jobs whether any service needs publishing.
+          echo "application_changed=${APPLICATION_CHANGED}" >> "$GITHUB_OUTPUT"
+          echo "shared_base_changed=${SHARED_BASE_CHANGED}" >> "$GITHUB_OUTPUT"
+
+          echo "Files changed since the last successful publish:"
+          printf '%s\n' "$CHANGED_FILES"
+
+
+  # ==========================================================
+  # JOB 2: BUILD AND TEST
+  # ==========================================================
+  # Build and test all seven independent Maven projects.
+  #
+  # This job runs when:
+  #   - There are unpublished application changes, OR
+  #   - The workflow is started manually.
+  #
+  # Every service has its own Maven wrapper and pom.xml.
+  # A failure in any service prevents image publishing.
+  # ==========================================================
   build-and-test:
-    name: Build and test all services
-    needs: detect-changes
-
-    # Run for application changes or an explicit manual workflow run.
-    if: needs.detect-changes.outputs.application_changed == 'true' || github.event_name == 'workflow_dispatch'
-
+    name: Build and test (${{ matrix.service }})
     runs-on: ubuntu-latest
 
-    # Each service gets its own independent job.
+    needs:
+      - detect-changes
+
+    # GitHub creates one matrix job for each service below.
     strategy:
       fail-fast: false
       matrix:
@@ -109,105 +206,199 @@ jobs:
           - configserver
           - message
 
+    # Skip normal CI work when no application changes are pending.
+    # Manual runs still execute the tests.
+    if: >-
+      ${{
+        needs.detect-changes.outputs.application_changed == 'true' ||
+        github.event_name == 'workflow_dispatch'
+      }}
+
     steps:
-      # Check out the source code for the current service build.
-      - name: Checkout repository
+      # Download the repository source code.
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      # Install JDK 25 for compilation and testing.
-      # Maven Wrapper downloads the Maven distribution configured by each service.
+      # Install Java 25 and cache Maven dependencies between runs.
       - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: ${{ matrix.service }}/pom.xml
 
-      # Linux runners require the Maven Wrapper script to be executable.
-      - name: Make Maven Wrapper executable
-        working-directory: ${{ matrix.service }}
-        run: chmod +x mvnw
-
-      # Compile the application, run tests, and perform Maven verification checks.
-      - name: Build and test
+      # Run the service's own Maven wrapper.
+      #
+      # clean  = remove previous build output.
+      # verify = compile, run tests, and execute verification checks.
+      - name: Build and test service
         working-directory: ${{ matrix.service }}
         run: ./mvnw -B -ntp clean verify
 
-  # Job 3: Publish container images to Docker Hub after successful verification.
+
+  # ==========================================================
+  # JOB 3: BUILD AND PUBLISH DOCKER IMAGES
+  # ==========================================================
+  # Publish only on pushes to main.
+  #
+  # A service is published only if its output from Job 1 is true.
+  # All required tests must succeed before this job can run.
+  #
+  # Jib builds the container image and pushes it directly to Docker Hub; a local Docker daemon is not required.
+  # ==========================================================
   publish-images:
-    name: Publish ${{ matrix.service }} image
+    name: Publish image (${{ matrix.service }})
+    runs-on: ubuntu-latest
+
     needs:
       - detect-changes
       - build-and-test
 
-    # Never publish images for pull requests.
-    # Publish only for pushes to main when application code has changed.
-    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.application_changed == 'true' && needs.build-and-test.result == 'success' }}
-    runs-on: ubuntu-latest
+    # Do not publish from pull requests.
+    # Do not publish if tests failed or there are no pending changes.
+    if: >-
+      ${{
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        needs.detect-changes.outputs.application_changed == 'true' &&
+        needs.build-and-test.result == 'success'
+      }}
 
-    # Define the service and its corresponding change-detection output.
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - service: accounts
-            changed: ${{ needs.detect-changes.outputs.accounts }}
-          - service: cards
-            changed: ${{ needs.detect-changes.outputs.cards }}
-          - service: loans
-            changed: ${{ needs.detect-changes.outputs.loans }}
-          - service: gatewayserver
-            changed: ${{ needs.detect-changes.outputs.gatewayserver }}
-          - service: eurekaserver
-            changed: ${{ needs.detect-changes.outputs.eurekaserver }}
-          - service: configserver
-            changed: ${{ needs.detect-changes.outputs.configserver }}
-          - service: message
-            changed: ${{ needs.detect-changes.outputs.message }}
+        service:
+          - accounts
+          - cards
+          - loans
+          - gatewayserver
+          - eurekaserver
+          - configserver
+          - message
+
+    # Use the current commit SHA as the Docker image tag.
+    # Example: soyachunkz/accounts:<commit-sha>
+    env:
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
-      # Skip publishing when this service has not changed.
-      - name: Skip unchanged service
-        if: matrix.changed != 'true'
-        run: echo "No changes detected for ${{ matrix.service }}. Skipping image publishing."
+      # Skip this matrix job's publishing steps when its service has no unpublished changes.
+      - name: Check whether this service needs publishing
+        if: ${{ needs.detect-changes.outputs[matrix.service] != 'true' }}
+        run: echo "No unpublished changes for ${{ matrix.service }}."
 
-      # Only check out source code when the service needs an image.
-      - name: Checkout repository
-        if: matrix.changed == 'true'
+      # Download source code only for services that need publishing.
+      - name: Checkout source code
+        if: ${{ needs.detect-changes.outputs[matrix.service] == 'true' }}
         uses: actions/checkout@v4
 
-      # Jib uses Java and Maven to package the application image.
+      # Install Java because Jib is invoked through Maven.
       - name: Set up Java 25
-        if: matrix.changed == 'true'
+        if: ${{ needs.detect-changes.outputs[matrix.service] == 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: ${{ matrix.service }}/pom.xml
 
-      # Make the service's Maven Wrapper executable on Linux.
-      - name: Make Maven Wrapper executable
-        if: matrix.changed == 'true'
-        working-directory: ${{ matrix.service }}
-        run: chmod +x mvnw
-
-      # Authenticate with Docker Hub using repository secrets.
-      # The credentials must be configured in GitHub repository settings.
+      # Authenticate to Docker Hub using GitHub repository secrets.
+      # Never put the Docker Hub token directly in this file.
       - name: Log in to Docker Hub
-        if: matrix.changed == 'true'
+        if: ${{ needs.detect-changes.outputs[matrix.service] == 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Use the full Git commit SHA as an immutable image tag.
-      # Skip tests here because the build-and-test job has already verified the code.
-      # Override the POM's default image name and tag through the Jib command line.
-      - name: Build and push image
-        if: matrix.changed == 'true'
+      # Compile first so target/classes exists on a clean runner.
+      # Then Jib builds and pushes the image directly to Docker Hub.
+      #
+      # -DskipTests avoids running the tests again; Job 2 already ran clean verify successfully.
+      - name: Build and push image with Jib
+        if: ${{ needs.detect-changes.outputs[matrix.service] == 'true' }}
         working-directory: ${{ matrix.service }}
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: ./mvnw -B -ntp -DskipTests compile jib:build -Dimage=soyachunkz/${{ matrix.service }}:${IMAGE_TAG}
+        run: >-
+          ./mvnw -B -ntp -DskipTests compile jib:build
+          -Dimage=soyachunkz/${{ matrix.service }}:${IMAGE_TAG}
+
+
+  # ==========================================================
+  # JOB 4: UPDATE THE SUCCESSFUL-PUBLISH CHECKPOINT
+  # ==========================================================
+  # Run only after all required publishing jobs succeed.
+  #
+  # The checkpoint is a movable Git tag:
+  #   ci/last-published
+  #
+  # If any image fails to publish, this job will not advance the checkpoint.
+  # The next push can therefore retry pending services.
+  #
+  # The guard below prevents an older run from moving the tag backwards if a newer run has already advanced it.
+  # ==========================================================
+  update-publish-checkpoint:
+    name: Update successful-publish checkpoint
+    runs-on: ubuntu-latest
+
+    needs:
+      - detect-changes
+      - build-and-test
+      - publish-images
+
+    # Only this job receives permission to write repository contents.
+    permissions:
+      contents: write
+
+    # Update the checkpoint only for a main-branch push that had pending changes and completed both testing and publishing.
+    if: >-
+      ${{
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        needs.detect-changes.outputs.application_changed == 'true' &&
+        needs.build-and-test.result == 'success' &&
+        needs.publish-images.result == 'success'
+      }}
+
+    steps:
+      # Fetch complete history and tags so the checkpoint can be updated.
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Move the checkpoint forward to this successfully published commit.
+      - name: Update checkpoint tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASELINE_TAG="ci/last-published"
+
+          # Refresh the remote main branch and tags before checking whether another run has already advanced the checkpoint.
+          git fetch origin main --tags
+
+          # Configure the Git identity used for this tag update.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Do not move the checkpoint backwards if this run is older than a commit that has already been successfully published.
+          if git rev-parse -q --verify \
+            "refs/tags/${BASELINE_TAG}" >/dev/null; then
+
+            CURRENT_CHECKPOINT=$(git rev-parse "refs/tags/${BASELINE_TAG}")
+
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$CURRENT_CHECKPOINT"; then
+              echo "The checkpoint is already at or beyond this commit."
+              echo "Nothing to update."
+              exit 0
+            fi
+          fi
+
+          # Move the local tag to the current successfully published commit.
+          git tag -f "$BASELINE_TAG" "$GITHUB_SHA"
+
+          # Force-update the remote tag because this tag is a movable pointer.
+          git push origin "refs/tags/${BASELINE_TAG}:refs/tags/${BASELINE_TAG}" --force
+
+          echo "Checkpoint updated successfully:"
+          echo "${BASELINE_TAG} -> ${GITHUB_SHA}"
