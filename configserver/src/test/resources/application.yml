@@ -1,8 +1,8 @@
-# Prevents cloning the private Git repository when the Config Server starts during tests
+# Prevents cloning the private Git repository when the Config Server starts during tests.
 spring:
   cloud:
     config:
       server:
-        # Use local resources instead of the private Git repository during tests
+        # Use local resources instead of the private Git repository during tests.
         native:
           search-locations: classpath:/config

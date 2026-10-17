@@ -210,4 +210,4 @@ jobs:
         working-directory: ${{ matrix.service }}
         env:
           IMAGE_TAG: ${{ github.sha }}
-        run: ./mvnw -B -ntp -DskipTests jib:build -Dimage=soyachunkz/${{ matrix.service }}:${IMAGE_TAG}
+        run: ./mvnw -B -ntp -DskipTests compile jib:build -Dimage=soyachunkz/${{ matrix.service }}:${IMAGE_TAG}
