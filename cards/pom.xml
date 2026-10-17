@@ -209,7 +209,7 @@
                 <version>3.5.2</version>
                 <configuration>
                     <from>
-                        <image>docker://soyachunkz/java25-curl:latest</image>
+                        <image>registry://soyachunkz/java25-curl:latest</image>
                     </from>
                     <to>
                         <image>soyachunkz/${project.artifactId}:latest</image>
