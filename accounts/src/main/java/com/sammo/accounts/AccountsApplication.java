@@ -39,6 +39,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 /**
  * The AccountsApplication class is the entry point for the Spring Boot application.
  * Adding this comment to check the CI/CD pipeline configured in GitHub Actions.
+ * Addind this comment because the previous pipeline failed and these changes we never published to dockerhub.
  */
 public class AccountsApplication {
 
