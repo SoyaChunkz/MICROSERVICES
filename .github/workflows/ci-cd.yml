@@ -308,8 +308,9 @@ jobs:
           cache: maven
           cache-dependency-path: ${{ matrix.service }}/pom.xml
 
-      # Linux runners require the Maven Wrapper script to be executable.
+      # Make the wrapper executable only for services being published.
       - name: Make Maven Wrapper executable
+        if: ${{ needs.detect-changes.outputs[matrix.service] == 'true' }}
         working-directory: ${{ matrix.service }}
         run: chmod +x mvnw
 
