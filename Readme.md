@@ -11,35 +11,31 @@ Docker Compose and Helm configurations are provided for multiple environments. T
 ### High-Level Architecture
 ```mermaid
 flowchart TB
-    Client([Client])
+    Client(["Client / API Consumer"])
+    Keycloak["Keycloak<br/>OAuth 2.0 · OpenID Connect<br/>Access Tokens (JWT)"]
 
-    subgraph Security["Authentication and Security"]
-        Keycloak["Keycloak<br/>OAuth 2.0 / OpenID Connect<br/>Identity and Access Management"]
-    end
-
-    subgraph Infrastructure["Spring Cloud Infrastructure"]
-        Gateway["Spring Cloud Gateway<br/>API Gateway / JWT Validation"]
-        Eureka["Eureka Server<br/>Service Discovery"]
+    subgraph Platform["Spring Cloud Infrastructure"]
+        Gateway["API Gateway<br/>Routing · JWT Validation"]
+        Eureka["Eureka<br/>Service Discovery"]
         Config["Config Server<br/>Centralized Configuration"]
     end
 
-    subgraph Business["Business Microservices"]
-        Accounts["Accounts Service"]
-        Loans["Loans Service"]
-        Cards["Cards Service"]
+    subgraph Services["Business Microservices"]
+        Accounts["Accounts"]
+        Loans["Loans"]
+        Cards["Cards"]
+        Message["Message Service"]
     end
 
-    subgraph Messaging["Asynchronous Messaging"]
-        Kafka[("Apache Kafka")]
+    Kafka[("Apache Kafka<br/>Asynchronous Messaging")]
+
+    subgraph Data["Databases"]
+        AccountsDB[("Accounts DB")]
+        LoansDB[("Loans DB")]
+        CardsDB[("Cards DB")]
     end
 
-    subgraph Persistence["Data Layer"]
-        AccountsDB[("Accounts Database")]
-        LoansDB[("Loans Database")]
-        CardsDB[("Cards Database")]
-    end
-
-    subgraph Observability["Observability"]
+    subgraph Monitoring["Observability"]
         Alloy["Grafana Alloy"]
         Prometheus["Prometheus"]
         Loki["Loki"]
@@ -47,43 +43,57 @@ flowchart TB
         Grafana["Grafana"]
     end
 
-    Client -->|"1. Obtain access token"| Keycloak
-    Keycloak -->|"2. Issue JWT"| Client
-    Client -->|"3. API request + Bearer token"| Gateway
+    Client <-->|"Obtain token"| Keycloak
+    Client -->|"Bearer token + API request"| Gateway
 
-    Gateway -->|"Validate JWT"| Keycloak
-    Gateway -->|"Route request"| Accounts
-    Gateway -->|"Route request"| Loans
-    Gateway -->|"Route request"| Cards
+    Gateway --> Accounts
+    Gateway --> Loans
+    Gateway --> Cards
 
-    Gateway -.->|"Discover services"| Eureka
+    Gateway -.-> Eureka
     Accounts -.-> Eureka
     Loans -.-> Eureka
     Cards -.-> Eureka
+    Message -.-> Eureka
 
-    Config -.->|"Load configuration"| Gateway
+    Config -.-> Gateway
     Config -.-> Accounts
     Config -.-> Loans
     Config -.-> Cards
+    Config -.-> Message
 
-    Accounts <-->|"Events / messages"| Kafka
-    Loans <-->|"Events / messages"| Kafka
-    Cards <-->|"Events / messages"| Kafka
+    Accounts <-->|"Events"| Kafka
+    Loans <-->|"Events"| Kafka
+    Cards <-->|"Events"| Kafka
+    Message <-->|"Consume / process messages"| Kafka
 
     Accounts --> AccountsDB
     Loans --> LoansDB
     Cards --> CardsDB
 
+    Gateway -.-> Alloy
     Accounts -.-> Alloy
     Loans -.-> Alloy
     Cards -.-> Alloy
-    Gateway -.-> Alloy
+    Message -.-> Alloy
 
     Alloy --> Loki
     Alloy --> Tempo
     Prometheus --> Grafana
     Loki --> Grafana
     Tempo --> Grafana
+
+    classDef security fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef infrastructure fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef business fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef messaging fill:#fef3c7,stroke:#d97706,color:#92400e
+    classDef observability fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+
+    class Keycloak security
+    class Gateway,Eureka,Config infrastructure
+    class Accounts,Loans,Cards,Message business
+    class Kafka messaging
+    class Alloy,Prometheus,Loki,Tempo,Grafana observability
 ```
 
 ### Core Components
@@ -100,6 +110,18 @@ flowchart TB
 | **Databases** | Persist business data for the respective services. |
 | **Observability Stack** | Collects and visualizes application telemetry, logs, metrics, and traces. |
 
+### Service Endpoints
+| Service | Default Port |
+|---|---:|
+| Config Server | `8071` |
+| Eureka Server | `8070` |
+| Gateway Server | `9090` |
+| Accounts Service | `8080` |
+| Loans Service | `8090` |
+| Cards Service | `9000` |
+
+These are the application ports used by the documented architecture. External port mappings may differ between Docker Compose and Kubernetes deployments.
+
 ### Request and Communication Flow
 1. The client authenticates with Keycloak and obtains an access token.
 2. The client sends API requests to Spring Cloud Gateway with the token.
@@ -109,6 +131,11 @@ flowchart TB
 6. Each business service accesses its associated database.
 7. Observability components collect and visualize telemetry from the application and its infrastructure.
 
+### Inter-Service Communication
+
+SammoBank uses OpenFeign for declarative HTTP communication between services. Eureka and Spring Cloud LoadBalancer support service discovery and instance selection.
+
+For example, the Accounts service can call the Loans and Cards services to retrieve related information and aggregate a customer-details response.
 
 ## Microservices
 
@@ -129,24 +156,75 @@ flowchart TB
 | **Config Server** | Provides centralized external configuration to the microservices. |
 | **Message** | Handles messaging-related functionality within the application. |
 
-### Project Structure
+## Project Structure
+
 ```text
-SammoBank/
+MICROSERVICES/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml
 ├── accounts/
-├── loans/
 ├── cards/
-├── gatewayserver/
-├── eurekaserver/
 ├── configserver/
-├── message/
-├── docker-compose/
-├── helm/
 ├── docker/
-└── .github/
-    └── workflows/
-        └── ci-cd.yml
+│   └── java25-curl/
+│       └── DockerFIle
+├── docker-compose/
+│   ├── default/                  # Complete local setup
+│   │   ├── common-config.yml
+│   │   └── docker-compose.yml
+│   ├── keycloak/
+│   │   └── realm/
+│   │       └── sammobank-realm.json
+│   ├── observability/
+│   │   ├── alloy/
+│   │   ├── grafana/
+│   │   ├── loki/
+│   │   ├── mysql/
+│   │   ├── prometheus/
+│   │   └── tempo/
+│   ├── prod/
+│   │   ├── common-config.yml
+│   │   └── docker-compose.yml
+│   └── qa/
+│       ├── common-config.yml
+│       └── docker-compose.yml
+├── eurekaserver/
+├── gatewayserver/
+├── helm/
+│   ├── environments/
+│   │   ├── dev-env/              # Complete local setup
+│   │   ├── qa-env/
+│   │   └── prod-env/
+│   ├── grafana/
+│   ├── grafana-alloy/
+│   ├── grafana-loki/
+│   ├── grafana-tempo/
+│   ├── kafka/
+│   ├── keycloak/
+│   ├── kube-prometheus/
+│   ├── mysql-exporter/
+│   ├── sammobank-common/
+│   ├── sammobank-databases/
+│   └── sammobank-services/
+├── k8/                           # Basic Kubernetes setup
+│   ├── 1_keycloak.yml
+│   ├── 2_configmap.yml
+│   ├── 3.1_configserver.yml
+│   ├── 3.2_configserver-secret.yml  # Not committed
+│   ├── 4_eurekaserver.yml
+│   ├── 5_databases.yml
+│   ├── 6_accounts.yml
+│   ├── 7_cards.yml
+│   ├── 8_loans.yml
+│   └── 9_gateway.yml
+├── loans/
+├── message/
+├── docker-compose.yml             # Required for local setup
+├── Readme.md
+└── .gitignore
 ```
-Each service can be built and tested independently using its Maven Wrapper. The repository also contains Docker Compose configurations, Helm deployment configurations, a custom Java base image, and the GitHub Actions CI/CD workflow.
+Each service is maintained as an independent Maven project. The repository also includes containerization, deployment, API testing, and CI/CD resources.
 
 ## Technology Stack
 
@@ -212,8 +290,11 @@ Ensure the following tools are installed before setting up SammoBank locally.
 - **Docker Hub account** — Required if building and publishing container images to your own registry.
 
 ### External Configuration
-The Config Server uses an external configuration repository. Ensure that the repository is accessible and that any required credentials are configured before starting the application.
-Refer to the [Local Setup](docs/deployment/local-setup.md) guide for environment configuration and startup instructions.
+
+The Config Server retrieves application configuration from an external Git repository. Ensure that the repository is accessible and that any required credentials are configured before starting the application.
+
+- **Configuration repository:** [MICROSERVICES-CONFIG](https://github.com/SoyaChunkz/MICROSERVICES-CONFIG)
+- **Setup guide:** [Local Setup](docs/deployment/local-setup.md)
 
 ## Getting Started
 Follow these steps to start SammoBank using the default Docker Compose configuration.
@@ -459,492 +540,3 @@ The observability stack supports:
 - MySQL performance and health monitoring.
 
 Detailed setup instructions and configuration files will be documented in the deployment guides.
-
-## Documentation
-
-The following documentation covers the architecture, implementation concepts, and deployment procedures used in SammoBank.
-
-### Theory and Concepts
-The `theory/` directory explains the concepts behind the technologies and architectural decisions used in the project.
-
-Topics include:
-- Microservices architecture and service discovery.
-- API Gateway and inter-service communication.
-- Centralized configuration.
-- Kafka and asynchronous messaging.
-- OAuth 2.0, OpenID Connect, and JWT security.
-- Resilience and fault tolerance.
-- Observability and distributed tracing.
-- Containerization, Kubernetes, and CI/CD.
-
-### Deployment Guides
-The `docs/deployment/` directory contains practical setup and operational instructions, including:
-- Local development setup.
-- Docker Compose deployment.
-- Kubernetes deployment using Helm.
-- Configuration and secrets management.
-- Monitoring and troubleshooting.
-
-These guides will be expanded as the project configuration and deployment procedures are documented.
-
-- Spring Boot
-- Spring Cloud Config Server
-- Spring Cloud Eureka Service Discovery
-- Spring Cloud Gateway
-- Spring Cloud OpenFeign
-- Spring Cloud Bus
-- Spring Boot Actuator
-- Spring Boot Validation
-- Spring Data JPA
-- Springdoc OpenAPI
-- MySQL
-- RabbitMQ
-- Docker
-- Docker Compose
-- Google Jib
-
-The services are designed to communicate through service discovery rather than relying on hardcoded service addresses.
-
-### Architecture
-Current architecture up to Eureka Service Discovery:
-```
-```text
-                         ┌─────────────────────┐
-                         │    Config Server    │
-                         │       :8071         │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Eureka Server     │
-                         │       :8070         │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │    Gateway Server   │
-                         │       :9090         │
-                         └──────────┬──────────┘
-                                    │
-                 ┌──────────────────┼──────────────────┐
-                 │                  │                  │
-                 ▼                  ▼                  ▼
-          ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-          │   Accounts  │    │    Loans    │    │    Cards    │
-          │    :8080    │    │    :8090    │    │    :9000    │
-          └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
-                 │                  │                  │
-                 ▼                  ▼                  ▼
-          ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-          │  AccountsDB │    │   LoansDB   │    │   CardsDB   │
-          │    MySQL    │    │    MySQL    │    │    MySQL    │
-          └─────────────┘    └─────────────┘    └─────────────┘
-
-                         ┌─────────────────────┐
-                         │      RabbitMQ       │
-                         │   Message Broker    │
-                         └─────────────────────┘
-```
-
-### Local Development
-
-Local development requires 4 infrastructure containers:
-
-- RabbitMQ
-- Accounts MySQL
-- Loans MySQL
-- Cards MySQL
-
-The Spring Boot services themselves can be run locally or built into Docker images.
-
-### RabbitMQ
-RabbitMQ is used by the Config Server / Spring Cloud Bus setup.
-```docker
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4-management
-```
-
-### MySQL Containers
-Accounts DB
-```docker
-docker run -p 13306:3306 --name accountsdb -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=accountsdb -d mysql
-```
-Loans DB
-```docker
-docker run -p 23306:3306 --name loansdb -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=loansdb -d mysql
-```
-Cards DB
-```docker
-docker run -p 33306:3306 --name cardsdb -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cardsdb -d mysql
-```
-Check running containers:
-```docker  
-docker ps
-```
-#### Update!!!
-
-Use the docker compose present in the root dir for local setup to run these containers for local setup with a single command.
-```docker 
-docker compose up
-```
-
-
-### Maven Build
-
-Clean and build the projects using Maven Wrapper:
-
-```maven
-.\mvnw.cmd clean install
-```
-
-### Building Docker Images
-
-The project currently uses different image-building approaches depending on the service.
-
-Accounts, Config Server and Eureka Server, these services use a Dockerfile. 
-After the Maven build, build the images:
-```docker 
-docker build -t soyachunkz/accounts:latest .
-docker build -t soyachunkz/configserver:latest .
-docker build -t soyachunkz/eurekaserver:latest .
-```
-
-Loans and Cards
-
-Loans uses Spring Boot Buildpacks to create container image.
-```docker 
-.\mvnw.cmd jib:dockerBuild
-.\mvnw.cmd spring-boot:build-image
-```
-
-Cards uses Jib for building its Docker image.
-```docker 
-.\mvnw.cmd jib:dockerBuild
-```
-
-#### Update!!!
-All application modules use Google Jib to build Docker images.
-
-Jib builds the Docker image directly from the Maven project without requiring a Dockerfile for each application.
-
-#### Custom Java 25 + CURL Base Image
-
-Services that require curl for Docker healthchecks use the custom base image:
-```docker 
-soyachunkz/java25-curl:latest
-```
-The base image is built once from:
-```docker
-docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
-```
-
-If the image is being used across different machines or environments, push it to Docker Hub:
-```docker
-docker push soyachunkz/java25-curl:latest
-```
-
-### Docker Compose
-```docker 
-docker compose -f docker-compose/default/docker-compose.yml up
-docker compose -f docker-compose/qa/docker-compose.yml up
-docker compose -f docker-compose/prod/docker-compose.yml up
-```
-
-### Service Discovery
-
-Eureka is used as the service registry.
-
-The microservices register themselves with Eureka:
-
-```
-        Accounts ──┐
-        Loans ─────┼──→ Eureka Server :8070
-        Cards ─────┘
-```
-
-Services can then discover other services using their registered service name instead of relying on fixed IP addresses.
-
-### Gateway Server
-
-Spring Cloud Gateway acts as the entry point for client requests.
-
-```
-                         Client
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   Gateway   │
-                    │    :9090    │
-                    ├─────────────┤
-                    │   Routing   │
-                    │   Logging   │
-                    │ Correlation │
-                    └──────┬──────┘
-                           │
-             ┌─────────────┼─────────────┐
-             ▼             ▼             ▼
-         Accounts        Loans         Cards
-             │
-             │ Feign
-             ├────────────────→ Cards
-             │
-             └────────────────→ Loans
-                    │
-                    ▼
-              Aggregated CustomerDetails
-```
-
-The Gateway uses Eureka service discovery and Spring Cloud LoadBalancer to locate the target services.
-
-### Configuration Server
-
-The Config Server centralizes configuration for the microservices.
-
-```
-        Config Server
-        │
-        ├── Accounts
-        ├── Loans
-        ├── Cards
-        └── Eureka Server
-```
-
-The services retrieve their environment-specific configuration from the Config Server.
-
-Config Git Repo: [https://github.com/SoyaChunkz/MICROSERVICES-CONFIG]
-
-### Docker Base Image for Curl
-```docker 
-docker build -t soyachunkz/java25-curl:latest ./docker/java25-curl
-```
-
-
-```
-                    ┌──────────────┐
-                    │ Spring Boot  │
-                    │ Microservices│
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-             Logs        Metrics       Traces
-              │            │            │
-              ▼            ▼            ▼
-            Alloy      Prometheus     OpenTelemetry
-              │            ▲            │
-              ▼            │            ▼
-             Loki    MySQL Exporter    Tempo
-              │            ▲            │
-              │            │            │
-              └────────────┼────────────┘
-                           ▼
-                        Grafana
-                        
-                        
-            Accounts DB ──┐
-            Loans DB ─────┼──→ MySQL Exporter ──→ Prometheus ──→ Grafana
-            Cards DB ─────┘
-            
-            
-  Gateway ──→ Accounts ──→ Cards
-    │            │
-    │            └──────→ Loans
-    │
-    └── OpenTelemetry ──→ Tempo ──→ Grafana
-```
-
-### OAuth2 Security with Keycloak
-
-This section implements OAuth2-based authentication and authorization in the microservices architecture using **Keycloak** as the Authorization Server and the **Gateway Server** as an OAuth2 Resource Server.
-
-#### OAuth2 Grant Types
-
-A grant type describes how a client obtains an access token.
-
-We implemented/learned two important flows:
-
-1. Client Credentials Grant
-2. Authorization Code Grant
-
-In Local dev env, Keycloak is running as a Docker container.
-```docker 
-docker run -p 127.0.0.1:8180:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.7.2 start-dev
-```
-
-```
-                        KEYCLOAK
-                  Authorization Server
-                           │
-            ┌──────────────┴────────────────┐
-            │                               │
-            │                               │
-        AC Client                       CC Client
-   sammobank-callcenter-ac         sammobank-callcenter-cc
-            │                               │
-            │                               │
-        User Flow                      Service Flow
-            │                               │
-        sammo user                    Service Account
-            │                               │
-            └──────────────┬────────────────┘
-                           │
-                          JWT
-                           │
-                           ▼
-                  ┌──────────────────────┐
-                  │       GATEWAY        │
-                  │   Resource Server    │
-                  │                      │
-                  │  Spring Security     │
-                  └──────────┬───────────┘
-                      JWT validation
-                             │
-                       `kid` → JWK
-                             │
-                    Public key verification
-                             │
-                       Extract roles
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-          ACCOUNTS         CARDS           LOANS
-              │              │              │
-              ▼              ▼              ▼
-          Accounts MS      Cards MS       Loans MS
-```
-
-| Concept                     | 🐇 RabbitMQ                                  | 🟠 Kafka                                              |
-| --------------------------- | -------------------------------------------- | ----------------------------------------------------- |
-| Main destination            | **Exchange**                                 | **Topic**                                             |
-| Consumers receive through   | **Queues**                                   | **Consumer Groups**                                   |
-| Your first destination      | `send-communication` **exchange**            | `send-communication` **topic**                        |
-| Email processing            | `email-service` **queue** → `email()`        | `email-service` **consumer group** → `email()`        |
-| SMS processing              | `sms-service` **queue** → `sms()`            | `sms-service` **consumer group** → `sms()`            |
-| Result destination          | `communication-sent` **exchange**            | `communication-sent` **topic**                        |
-| Accounts processing         | Accounts **queue** → `updateCommunication()` | Accounts **consumer group** → `updateCommunication()` |
-| Message storage             | Mainly queue-based delivery                  | Messages remain in topic partitions for retention     |
-| Same message to email + SMS | Separate queues bound to exchange            | Separate consumer groups                              |
-
-
-``` 
-                                RABBITMQ
-                                    │
-                                Accounts
-                                    │
-                                    │ sendCommunication()
-                                    ▼
-                        ┌──────────────────────────────┐
-                        │ send-communication EXCHANGE  │
-                        └──────────────┬───────────────┘
-                                       │
-                                ┌──────┴──────┐
-                                ▼             ▼
-                         ┌─────────────┐ ┌────────────┐
-                         │email-service│ │ sms-service│
-                         │   QUEUE     │ │   QUEUE    │
-                         └──────┬──────┘ └──────┬─────┘
-                                │              │
-                                ▼              ▼
-                              email()        sms()
-                                │              │
-                                └──────┬───────┘
-                                       ▼
-                        ┌──────────────────────────────┐
-                        │ communication-sent EXCHANGE  │
-                        └──────────────┬───────────────┘
-                                       │
-                                       ▼
-                               ┌────────────────┐
-                               │ Accounts QUEUE │
-                               └───────┬────────┘
-                                       ▼
-                           updateCommunication()
-                                       │
-                                       ▼
-                                  Update DB
-                                  
-----------------------------------------------------------------------------------------------------------
-
-                                  KAFKA
-                                    │
-                                Accounts
-                                    │
-                                    │ sendCommunication()
-                                    ▼
-                        ┌──────────────────────────────┐
-                        │ send-communication  TOPIC    │
-                        └──────────────┬───────────────┘
-                                       │
-                                ┌──────┴──────┐
-                                ▼             ▼
-                         ┌──────────────┐ ┌──────────────┐
-                         │email-service │ │ sms-service  │
-                         │ CONSUMER     │ │ CONSUMER     │
-                         │    GROUP     │ │    GROUP     │
-                         └──────┬───────┘ └──────┬───────┘
-                                │                │
-                                ▼                ▼
-                              email()          sms()
-                                │                │
-                                └────────┬───────┘
-                                         ▼
-                        ┌──────────────────────────────┐
-                        │ communication-sent  TOPIC    │
-                        └──────────────┬───────────────┘
-                                       │
-                                       ▼
-                              ┌──────────────────┐
-                              │ Accounts CONSUMER│
-                              │      GROUP       │
-                              └────────┬─────────┘
-                                       ▼
-                           updateCommunication()
-                                       │
-                                       ▼
-                                  Update DB
-```
-
-```
-kubectl port-forward -n kubernetes-dashboard svc/kubernetes-dashboard-kong-proxy 8443:443
-
-kubectl create token admin-user -n kubernetes-dashboard
-
-kubectl create configmap keycloak-realm-config --from-file=sammobank-realm.json=../docker-compose/keycloak/realm/sammobank-realm.json
-```
-
-```
-kubectl apply -f .\3.2_configserver-secret.yml 
-
-
-# 1. Databases
-helm install databases .\sammobank-databases\
-
-# 2. Keycloak
-helm install keycloak .\keycloak\
-
-# 3. Kafka
-helm install kafka .\kafka\
-
-# 4. SammoBank microservices
-helm install dev-env .\environments\dev-env\
-
-# 5. MySQL Exporter
-helm install mysql-exporter .\mysql-exporter\
-
-# 6. Prometheus
-helm install kube-prometheus .\kube-prometheus\
-
-# 7. Loki + MinIO
-helm install grafana-loki .\grafana-loki\
-
-# 8. Grafana Alloy
-helm install grafana-alloy .\grafana-alloy\
-
-# 9. Tempo
-helm install grafana-tempo .\grafana-tempo\
-
-# 10. Grafana
-helm install grafana .\grafana\
-
-kubectl port-forward svc/keycloak 8180:8180
-```
-
