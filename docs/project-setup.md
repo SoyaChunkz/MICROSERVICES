@@ -280,5 +280,3 @@ When running services inside Docker Compose, use the appropriate Compose service
 Inspect its IntelliJ console or container logs. Verify that its required infrastructure is available and that configuration, credentials, ports, and environment variables are correct.
 
 ---
-
-For detailed information about authentication, Kafka messaging, service discovery, centralized configuration, observability, and Kubernetes deployments, refer to the corresponding topic-specific documents in the `docs/` directory.

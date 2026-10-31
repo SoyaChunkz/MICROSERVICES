@@ -1,9 +1,8 @@
 # OAuth2 Security with Keycloak
 
-SammoBank implements OAuth 2.0-based authentication and authorization using **Keycloak** as the Authorization Server and the **Spring Cloud Gateway** as an OAuth2 Resource Server.
+SammoBank implements OAuth 2.0-based authentication and authorization using Keycloak as the Authorization Server and the Spring Cloud Gateway as the OAuth2 Resource Server.
 
-Keycloak handles identity and access token issuance, while the Gateway protects API endpoints by validating access tokens and enforcing the configured authorization rules.
-
+Keycloak issues signed JWT access tokens, and the Gateway validates those tokens before allowing requests to reach the Accounts, Cards, or Loans services.
 ## Table of Contents
 
 - [Overview](#overview)
@@ -27,11 +26,11 @@ In SammoBank:
 
 - **Keycloak** acts as the Authorization Server.
 - **Gateway Server** acts as an OAuth2 Resource Server.
-- **Spring Security** provides security integration and token validation.
+- **Spring Security** integrates with JWT-based resource-server validation.
 - **JWT access tokens** carry claims about the client, user, and granted permissions.
 - **Backend microservices** handle business operations after requests are routed through the Gateway.
 
-The exact authorization checks depend on the application's security configuration and the roles or authorities configured in Keycloak.
+The exact authorization rules depend on the configured Spring Security rules and the roles or authorities assigned to the token in Keycloak.
 
 ## Key Concepts
 
@@ -53,7 +52,7 @@ It defines how clients can authenticate users and obtain identity information, i
 
 ### JSON Web Token (JWT)
 
-A JWT is a token format commonly used for access tokens.
+A JWT is an encoded token format commonly used for access tokens.
 
 A signed JWT typically contains three parts:
 
@@ -63,7 +62,7 @@ Header.Payload.Signature
 
 - **Header:** Contains token metadata, such as the signing algorithm and key identifier (`kid`).
 - **Payload:** Contains claims such as issuer, subject, audience, expiry, and potentially roles or scopes.
-- **Signature:** Allows the recipient to verify that the token was signed by a trusted issuer and has not been modified.
+- **Signature:** Allows  the receiver to verify that the token was issued by a trusted authority and has not been altered
 
 A JWT is generally encoded, not encrypted. Its payload should not contain secrets.
 
@@ -73,13 +72,13 @@ Keycloak publishes public keys that resource servers can use to verify signed to
 
 A JWT's `kid` identifies the signing key used for the token. The resource server can use this identifier to select the corresponding public key from the issuer's published JWK Set.
 
-This allows the Gateway to validate signed tokens without contacting Keycloak for every API request, provided the necessary keys are available.
+This allows the Gateway to validate tokens without contacting Keycloak for every API call, as long as the relevant signing keys are available locally or via issuer metadata.
 
 ## OAuth2 Grant Types
 
 A grant type describes how a client obtains an access token.
 
-SammoBank's documented security learning and configuration cover two important flows:
+SammoBank's project setup covers two important flows:
 
 1. Client Credentials Grant
 2. Authorization Code Grant
@@ -102,22 +101,59 @@ Flow:
 Conceptual flow:
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'actorBkg': '#DDF3F5',
+    'actorBorder': '#168A9B',
+    'actorTextColor': '#12343B',
+    'actorLineColor': '#168A9B',
+    'signalColor': '#168A9B',
+    'signalTextColor': '#12343B',
+    'labelBoxBkgColor': '#BCE8ED',
+    'labelBoxBorderColor': '#168A9B',
+    'labelTextColor': '#12343B',
+    'loopTextColor': '#12343B',
+    'activationBkgColor': '#BCE8ED',
+    'activationBorderColor': '#168A9B',
+    'sequenceNumberColor': '#FFFFFF',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
 sequenceDiagram
-    participant Client as Client Application
+    autonumber
+    participant Client as Client App / Service
     participant KC as Keycloak
     participant GW as Gateway
-    participant API as Backend Service
+    participant API as Accounts / Cards / Loans
 
-    Client->>KC: Request token using client credentials
-    KC-->>Client: Access token
-    Client->>GW: API request with Bearer token
-    GW->>GW: Validate token and authorization
-    GW->>API: Forward authorized request
-    API-->>GW: Response
-    GW-->>Client: API response
+    Client->>KC: POST /token with client_credentials
+    activate KC
+    KC-->>Client: Access token (JWT)
+    deactivate KC
+
+    Client->>GW: GET /sammobank/accounts/... with Bearer token
+    activate GW
+    GW->>GW: Validate JWT signature + issuer + expiry
+    GW->>GW: Read realm_access.roles
+    GW->>GW: Map roles to Spring authorities
+    alt role allowed
+        GW->>API: Forward authorized request
+        API-->>GW: Response
+        GW-->>Client: API response
+    else role missing
+        GW-->>Client: 403 Forbidden
+    end
+    deactivate GW
 ```
 
-In Keycloak, the client must be configured appropriately for service authentication, including enabling its service account where required.
+This is the most relevant flow for the current SammoBank project because the imported realm contains a machine-to-machine client named sammobank-callcenter-cc with service account support enabled.
 
 ### 2. Authorization Code Grant
 
@@ -139,24 +175,57 @@ Flow:
 Conceptual flow:
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'actorBkg': '#DDF3F5',
+    'actorBorder': '#168A9B',
+    'actorTextColor': '#12343B',
+    'actorLineColor': '#168A9B',
+    'signalColor': '#168A9B',
+    'signalTextColor': '#12343B',
+    'labelBoxBkgColor': '#BCE8ED',
+    'labelBoxBorderColor': '#168A9B',
+    'labelTextColor': '#12343B',
+    'loopTextColor': '#12343B',
+    'activationBkgColor': '#BCE8ED',
+    'activationBorderColor': '#168A9B',
+    'sequenceNumberColor': '#FFFFFF',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
 sequenceDiagram
-    participant User
-    participant Client as Client Application
+    autonumber
+    participant User as Sammo User
+    participant Client as OAuth2 Client
     participant KC as Keycloak
     participant GW as Gateway
     participant API as Backend Service
 
-    User->>Client: Access protected resource
-    Client->>KC: Redirect to authorize
-    User->>KC: Authenticate
+    User->>Client: Open protected app page
+    Client->>KC: Redirect to login /authorize
+    User->>KC: Login and consent
     KC-->>Client: Redirect with authorization code
     Client->>KC: Exchange code for tokens
-    KC-->>Client: Access token and other applicable tokens
-    Client->>GW: API request with Bearer token
-    GW->>GW: Validate token and authorization
-    GW->>API: Forward authorized request
-    API-->>GW: Response
-    GW-->>Client: API response
+    KC-->>Client: Access token + refresh token
+    Client->>GW: API call with Bearer token
+    activate GW
+    GW->>GW: Validate JWT using JWK set
+    GW->>GW: Check issuer, expiry, roles
+    alt allowed
+        GW->>API: Forward request
+        API-->>GW: Response
+        GW-->>Client: Response
+    else denied
+        GW-->>Client: 401 / 403
+    end
+    deactivate GW
 ```
 
 For production use, clients should use the appropriate secure flow for their application type. Authorization Code with PKCE is recommended for public clients and is also suitable for many other client types.
@@ -165,45 +234,66 @@ For production use, clients should use the appropriate secure flow for their app
 
 ### SammoBank Keycloak Architecture
 
-The following diagram represents the security architecture described in the original project documentation.
+The following diagram reflects the real project setup found in the current repository:
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'clusterBkg': '#EFFAFA',
+    'clusterBorder': '#78C9D2',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
 flowchart TB
-    KC["KEYCLOAK<br/>Authorization Server"]
+    KC["KEYCLOAK<br/>Authorization Server<br/>Realm: sammobank"]
 
     subgraph Clients["OAuth2 Clients"]
         AC["AC Client<br/>sammobank-callcenter-ac"]
         CC["CC Client<br/>sammobank-callcenter-cc"]
     end
 
-    User["sammo user"]
-    SA["Service Account"]
+    User["user"]
+    SA["Service Account<br/>service-account-sammobank-callcenter-cc"]
 
-    AC --> User
-    CC --> SA
-
-    User -->|"Authorization Code flow"| KC
-    SA -->|"Client Credentials flow"| KC
+    User -->|"Authorization Code"| KC
+    SA -->|"Client Credentials"| KC
+    AC -->|"Authorization Code"| KC
+    CC -->|"Client Credentials"| KC
 
     KC -->|"JWT access token"| GW
 
     GW["GATEWAY<br/>OAuth2 Resource Server<br/>Spring Security"]
 
     GW --> V["Validate JWT"]
-    V --> K["Read kid and select JWK"]
-    K --> P["Verify token signature and claims"]
-    P --> R["Apply configured authorization rules"]
+    V --> J["Read kid and fetch JWK"]
+    J --> S["Verify signature + issuer + expiry"]
+    S --> R["Map realm_access.roles to authorities"]
+    R --> A["hasRole('ACCOUNTS')"]
+    R --> C["hasRole('CARDS')"]
+    R --> L["hasRole('LOANS')"]
 
-    R --> Accounts["ACCOUNTS"]
-    R --> Cards["CARDS"]
-    R --> Loans["LOANS"]
-
-    Accounts --> AMS["Accounts Microservice"]
-    Cards --> CMS["Cards Microservice"]
-    Loans --> LMS["Loans Microservice"]
+    A --> AMS["Accounts Service"]
+    C --> CMS["Cards Service"]
+    L --> LMS["Loans Service"]
 ```
 
-The client names and user label above are retained from the original project notes. Confirm that these clients, users, service accounts, and roles match the currently imported Keycloak realm before relying on them.
+This matches the actual project patterns:
+- realm: sammobank
+- client: sammobank-callcenter-ac
+- client: sammobank-callcenter-cc
+- gateway validates JWTs against the Keycloak JWK endpoint
+- gateway maps realm_access.roles to Spring security authorities
+- route authorization uses:
+    - /sammobank/accounts/** => hasRole("ACCOUNTS")
+    - /sammobank/cards/** => hasRole("CARDS")
+    - /sammobank/loans/** => hasRole("LOANS"
 
 ### Component Responsibilities
 
@@ -211,9 +301,9 @@ The client names and user label above are retained from the original project not
 |---|---|
 | Keycloak | Authenticates users and clients and issues tokens |
 | OAuth2 client | Obtains tokens and sends them with API requests |
-| Gateway Server | Validates access tokens and routes API requests |
-| Spring Security | Integrates token authentication and authorization into the Gateway |
-| Backend microservices | Perform business operations behind the configured API routes |
+| Gateway Server | Validates JWTs, checks roles, and routes requests |
+| Spring Security | Integrates JWT resource-server logic and authorization |
+| Backend microservices | Handle business operations behind the Gateway |
 
 ## Authentication and Authorization Flow
 
@@ -224,7 +314,16 @@ Authentication and authorization are related but different.
 
 A successful token validation does not automatically mean that every API operation is permitted.
 
-The Gateway can validate token claims such as the issuer, expiry, and signature. Role- or scope-based authorization depends on the application's configured security rules and how Keycloak claims are mapped to Spring Security authorities.
+In this project, the Gateway validates the JWT and then checks the `realm_access.roles` claim. The project’s `KeycloakRoleConverter` converts each role into a Spring authority by prefixing it with `ROLE_`.
+
+Example:
+- Keycloak role: `ACCOUNTS`
+- Spring authority: `ROLE_ACCOUNT`
+
+The Gateway then authorizes requests with rules such as:
+- `pathMatchers("/sammobank/accounts/**").hasRole("ACCOUNTS")`
+- `pathMatchers("/sammobank/cards/**").hasRole("CARDS")`
+- `pathMatchers("/sammobank/loans/**").hasRole("LOANS")`
 
 ## JWT Validation
 
@@ -240,12 +339,13 @@ The Gateway's resource-server configuration validates the token before allowing 
 Typical validation steps include:
 
 1. Extract the Bearer token from the request.
-2. Verify the token signature using a trusted signing key.
+2. Verify the JWT signature using a trusted signing key.
 3. Validate standard claims, including issuer and expiration.
 4. Validate the audience where the application is configured to require it.
-5. Convert configured roles or scopes into authorities.
-6. Apply endpoint authorization rules.
-7. Route authorized requests to the relevant backend service.
+5. Read roles from `realm_access.roles`.
+6. Convert those roles to Spring authorities.
+7. Apply endpoint authorization rules.
+8. Route authorized requests to the relevant backend service.
 
 ### How `kid` and JWKs Work Together
 
@@ -261,9 +361,9 @@ The JWT header may contain a key identifier:
 
 The `kid` value identifies the signing key. The Gateway can use the trusted issuer's published JWK Set to select the corresponding public key and verify the token signature.
 
-The example above is illustrative; the actual algorithm and key identifier depend on the token issued by Keycloak.
+The example above is illustrative; the actual algorithm and key ID depend on the token issued by Keycloak.
 
-A valid signature alone is not sufficient. The token must also satisfy the resource server's issuer, expiry, and other configured claim checks.
+A valid signature alone is not sufficient. The token must also satisfy configured issuer, expiry, and authorization rules.
 
 ## Local Keycloak Setup
 
@@ -310,17 +410,23 @@ SammoBank includes a realm configuration file in the repository:
 docker-compose/keycloak/realm/sammobank-realm.json
 ```
 
-The realm configuration may define clients, roles, users, service accounts, and other identity settings.
+This file is imported into Keycloak to set up the SammoBank realm, clients, roles, and service-account configuration.
 
 To use the project's intended authentication flows:
 
 1. Start Keycloak.
 2. Open the Admin Console.
-3. Import the realm configuration using Keycloak's realm import functionality.
-4. Verify the client IDs and their enabled authentication flows.
-5. Verify the registered redirect URIs for Authorization Code clients.
-6. Verify the service account configuration for Client Credentials clients.
-7. Confirm the roles and permissions expected by the Gateway.
+3. Import the realm configuration: `sammobank-realm.json` using Keycloak's realm import functionality.
+4. Verify the realm name is sammobank.
+5. Verify the clients are present:
+   - sammobank-callcenter-ac
+   - sammobank-callcenter-cc
+6. Verify the roles:
+   - ACCOUNTS
+   - CARDS
+   - LOANS
+7. Verify the service-account client sammobank-callcenter-cc has service accounts enabled.
+8. Confirm the Gateway is configured to trust the sammobank issuer and JWK endpoint.
 
 The exact realm-import procedure can vary with the Keycloak version and deployment setup.
 
@@ -328,11 +434,13 @@ The exact realm-import procedure can vary with the Keycloak version and deployme
 
 ## Testing the Authentication Flow
 
-The following is a conceptual example for testing a protected API. The actual token endpoint, client IDs, secrets, scopes, and API route must match the active realm and application configuration.
+The following examples reflect the actual project setup and how this repository expects Keycloak and the Gateway to behave.
 
-### Client Credentials
+### 1. Client Credentials
 
-A typical token request uses the Keycloak token endpoint:
+This is the flow most aligned with the current project implementation.
+
+Use the `sammobank-callcenter-cc` client with its secret found in the imported realm JSON.
 
 ```http
 POST http://localhost:8180/realms/<realm-name>/protocol/openid-connect/token
@@ -347,7 +455,7 @@ client_id=<client-id>
 client_secret=<client-secret>
 ```
 
-If the client is configured correctly, Keycloak returns an access token.
+If the client is configured correctly, Keycloak returns a JWT access token.
 
 Send that token to the Gateway:
 
@@ -356,11 +464,27 @@ GET http://localhost:9090/<configured-api-route>
 Authorization: Bearer <access_token>
 ```
 
-### Authorization Code
+The Gateway will:
+- validate the token
+- read the roles from `realm_access.roles`
+- map them to `ROLE_...` authorities
+- authorize the request based on endpoint rules
 
-For Authorization Code, use a client configured with the appropriate redirect URI and flow settings.
+Example route behavior:
+- `ACCOUNTS` can access `/sammobank/accounts/**`
+- `CARDS` can access `/sammobank/cards/**`
+- `LOANS` can access `/sammobank/loans/**`
 
-The user signs in through Keycloak, the client receives an authorization code, and the client exchanges that code for tokens. The access token is then sent to the Gateway in the Bearer header.
+### 2. Authorization Code
+
+For interactive user-based access, use the sammobank-callcenter-ac client.
+
+Typical flow:
+1. User logs in to Keycloak
+2. Client receives an authorization code
+3. Client exchanges code for access token
+4. Client sends token to Gateway in Bearer header
+5. Gateway validates and authorizes the request
 
 Use the actual redirect URI, client settings, and token endpoint from the imported realm configuration.
 
@@ -426,10 +550,3 @@ Verify that Keycloak is reachable from the Gateway's runtime environment and tha
 Remember that `localhost` inside a container refers to that container itself, not automatically to the Keycloak container or the host machine.
 
 ---
-
-For related topics, see:
-
-- [Project Setup](project-setup.md)
-- [Kafka Messaging](kafka-messaging.md)
-- [Service Discovery and Gateway](service-discovery-gateway.md)
-- [Configuration Management](configuration-management.md)

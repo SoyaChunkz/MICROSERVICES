@@ -1,12 +1,10 @@
 # Helm Deployment
 
-This document captures the Helm chart structure and installation order from the old SammoBank README.
+This document captures the Helm chart structure and installation order.
 
 The commands are preserved as documented, but chart dependencies, paths, namespaces, values, and release names should be verified against the current repository before running them.
 
 ## 1. Chart Structure
-
-The old README lists these Helm paths:
 
 ```text
 helm/
@@ -27,7 +25,7 @@ helm/
 └── sammobank-services/
 ```
 
-The `dev-env` setup was described as the complete setup. The QA and production environments exist, but may need further updates or validation.
+The `dev-env` setup is a complete setup. The QA and production environments exist, but may need further updates or validation.
 
 ## 2. Before Installing
 
@@ -40,49 +38,60 @@ The `dev-env` setup was described as the complete setup. The QA and production e
 
 Helm does not build application images. Build and publish them, or otherwise make them available to the cluster, before installing charts that reference them.
 
+### Required Kubernetes Secret
+
+Before deploying the SammoBank services, create the `configserver-secret`
+Kubernetes Secret containing:
+
+- GitHub credentials for Config Server to access `MICROSERVICES-CONFIG`.
+- Email credentials for Message Service to send email notifications.
+
+
+
+Refer to [ Kubernetes Manifests ](k8.md) for the Secret template and creation instructions. 
+
+The Secret must exist in the same namespace as the workloads that consume it.
+The Helm charts should reference this existing Secret.
+
 ## 3. Installation Order from the Old README
 
 Run these commands from the repository's `helm/` directory.
 
-They are reproduced from the old README and are not independently validated against the current chart definitions.
-
 ```powershell
 # 1. Databases
-helm install databases .\sammobank-databases\
+helm install databases .\sammobank-databases
 
 # 2. Keycloak
-helm install keycloak .\keycloak\
+helm install keycloak .\keycloak
 
 # 3. Kafka
-helm install kafka .\kafka\
+helm install kafka .\kafka
 
 # 4. SammoBank microservices
-helm install dev-env .\environments\dev-env\
+helm install dev-env .\environments\dev-env
 
 # 5. MySQL Exporter
-helm install mysql-exporter .\mysql-exporter\
+helm install mysql-exporter .\mysql-exporter
 
 # 6. Prometheus
-helm install kube-prometheus .\kube-prometheus\
+helm install kube-prometheus .\kube-prometheus
 
 # 7. Loki + MinIO
-helm install grafana-loki .\grafana-loki\
+helm install grafana-loki .\grafana-loki
 
 # 8. Grafana Alloy
-helm install grafana-alloy .\grafana-alloy\
+helm install grafana-alloy .\grafana-alloy
 
 # 9. Tempo
-helm install grafana-tempo .\grafana-tempo\
+helm install grafana-tempo .\grafana-tempo
 
 # 10. Grafana
-helm install grafana .\grafana\
+helm install grafana .\grafana
 ```
 
 Review chart dependencies and values before installing. Some charts may have prerequisites or require a namespace, values file, or specific release name.
 
 ## 4. Keycloak Port Forwarding
-
-The old README includes:
 
 ```powershell
 kubectl port-forward svc/keycloak 8180:8180
@@ -131,8 +140,4 @@ Use the appropriate namespace where required.
 - **Service unavailable:** Check Kubernetes Service ports, selectors, endpoints, and namespaces.
 - **Storage issue:** Check PVCs and storage class support.
 
-## Related Documentation
-
-- `k8/README.md` — basic Kubernetes manifest setup.
-- `docs/observability.md` — observability components.
-- Root `Readme.md` — project overview.
+---
