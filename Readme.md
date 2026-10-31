@@ -522,6 +522,9 @@ The `ci/last-published` tag tracks the last commit for which the required image 
 
 The checkpoint advances only after the required pipeline stages succeed, helping prevent failed publishing runs from being treated as completed.
 
+More details on CI-CD is available at [CI-CD](docs/ci-cd.md).
+
+
 ## Security
 
 SammoBank uses Keycloak and Spring Security to implement token-based protection across the platform.
