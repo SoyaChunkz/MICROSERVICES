@@ -1,100 +1,122 @@
 # SammoBank Microservices
 
-### SammoBank is a banking application built using Spring Boot and Spring Cloud, demonstrating a microservices architecture with centralized configuration, service discovery, API gateway routing, inter-service communication, asynchronous messaging, security, observability, containerization, and CI/CD.
-### The application consists of independently buildable services for Accounts, Loans, and Cards, supported by infrastructure services such as Eureka Service Discovery, Spring Cloud Config Server, and Spring Cloud Gateway.
-Docker Compose and Helm configurations are provided for multiple environments. The Docker Compose default configuration and Helm dev-env configuration represent the local development setup and have been validated. The QA and production configurations are also included but may require further updates and validation.
+### SammoBank is a banking microservices application built with Spring Boot and Spring Cloud. It demonstrates centralized configuration, service discovery, gateway-based API routing, OAuth2 security with Keycloak, asynchronous messaging with Kafka, observability, containerization, and deployment automation.
+
+The project includes:
+- Accounts, Loans, and Cards business services
+- Gateway Server for routing and JWT validation
+- Eureka Server for service discovery
+- Config Server for centralized configuration
+- Keycloak for identity and access management
+- Kafka-based asynchronous messaging
+- Docker Compose and Helm-based deployment resources
+- Observability with Prometheus, Loki, Tempo, and Grafana Docker Compose and Helm configurations are provided for multiple environments. The Docker Compose default configuration and Helm dev-env configuration represent the local development setup and have been validated. The QA and production configurations are also included but may require further updates and validation.
 
 ## Architecture
 
-### SammoBank follows a microservices architecture built with Spring Boot and Spring Cloud. The system separates business services from infrastructure components for routing, authentication, service discovery, centralized configuration, and asynchronous messaging.
+SammoBank follows a layered microservices architecture with shared platform services and domain business services.
 
 ### High-Level Architecture
 ```mermaid
-flowchart TB
-    Client(["Client / API Consumer"])
-    Keycloak["Keycloak<br/>OAuth 2.0 · OpenID Connect<br/>Access Tokens (JWT)"]
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'clusterBkg': '#EFFAFA',
+    'clusterBorder': '#78C9D2',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
+flowchart LR
+    Client["Client / API Consumer"]
 
-    subgraph Platform["Spring Cloud Infrastructure"]
-        Gateway["API Gateway<br/>Routing · JWT Validation"]
-        Eureka["Eureka<br/>Service Discovery"]
-        Config["Config Server<br/>Centralized Configuration"]
-    end
+    Keycloak["Keycloak<br/>Authorization Server<br/>Realm: sammobank"]
+    Gateway["Gateway Server<br/>JWT validation + routing"]
 
-    subgraph Services["Business Microservices"]
+    Config["Config Server"]
+    Eureka["Eureka Server"]
+
+    subgraph A["Accounts"]
         Accounts["Accounts"]
-        Loans["Loans"]
-        Cards["Cards"]
-        Message["Message Service"]
+        AccountsDB[("Accounts DB")]
     end
 
-    Kafka[("Apache Kafka<br/>Asynchronous Messaging")]
-
-    subgraph Data["Databases"]
-        AccountsDB[("Accounts DB")]
+    subgraph L["Loans"]
+        Loans["Loans"]
         LoansDB[("Loans DB")]
+    end
+
+    subgraph C["Cards"]
+        Cards["Cards"]
         CardsDB[("Cards DB")]
     end
 
-    subgraph Monitoring["Observability"]
-        Alloy["Grafana Alloy"]
-        Prometheus["Prometheus"]
-        Loki["Loki"]
-        Tempo["Tempo"]
-        Grafana["Grafana"]
-    end
+    Message["Message Service"]
 
-    Client <-->|"Obtain token"| Keycloak
-    Client -->|"Bearer token + API request"| Gateway
+    Kafka[("Kafka<br/>send-communication / communication-sent")]
 
-    Gateway --> Accounts
-    Gateway --> Loans
-    Gateway --> Cards
+    Client -->|"1. Get token"| Keycloak
+    Keycloak -->|"2. JWT token"| Client
+    Client -->|"3. Bearer token"| Gateway
 
-    Gateway -.-> Eureka
-    Accounts -.-> Eureka
-    Loans -.-> Eureka
-    Cards -.-> Eureka
-    Message -.-> Eureka
+    Gateway -.->|"4. JWK / issuer metadata"| Keycloak
 
-    Config -.-> Gateway
-    Config -.-> Accounts
-    Config -.-> Loans
-    Config -.-> Cards
-    Config -.-> Message
-
-    Accounts <-->|"Events"| Kafka
-    Loans <-->|"Events"| Kafka
-    Cards <-->|"Events"| Kafka
-    Message <-->|"Consume / process messages"| Kafka
+    Gateway -->|"5. Route /accounts"| Accounts
+    Gateway -->|"6. Route /loans"| Loans
+    Gateway -->|"7. Route /cards"| Cards
 
     Accounts --> AccountsDB
     Loans --> LoansDB
     Cards --> CardsDB
 
-    Gateway -.-> Alloy
-    Accounts -.-> Alloy
-    Loans -.-> Alloy
-    Cards -.-> Alloy
-    Message -.-> Alloy
+    Accounts -->|"8. sendCommunication()"| Kafka
+    Kafka -->|"9. consume request"| Message
+    Message -->|"10. publish status"| Kafka
+    Kafka -->|"11. communication result"| Accounts
 
-    Alloy --> Loki
-    Alloy --> Tempo
-    Prometheus --> Grafana
-    Loki --> Grafana
-    Tempo --> Grafana
+    Config -.->|"Config"| Gateway
+    Config -.->|"Config"| Accounts
+    Config -.->|"Config"| Loans
+    Config -.->|"Config"| Cards
+    Config -.->|"Config"| Message
 
-    classDef security fill:#fce7f3,stroke:#be185d,color:#831843
-    classDef infrastructure fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    classDef business fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef messaging fill:#fef3c7,stroke:#d97706,color:#92400e
-    classDef observability fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    Eureka -.->|"Discovery"| Gateway
+    Eureka -.->|"Discovery"| Accounts
+    Eureka -.->|"Discovery"| Loans
+    Eureka -.->|"Discovery"| Cards
+    Eureka -.->|"Discovery"| Message
+
+    classDef security fill:#BCE8ED,stroke:#168A9B,stroke-width:2px,color:#12343B
+    classDef business fill:#EFFAFA,stroke:#42AAB8,stroke-width:1.5px,color:#12343B
+    classDef infra fill:#DDF3F5,stroke:#168A9B,stroke-width:1.5px,color:#12343B
+    classDef data fill:#F7F9D6,stroke:#A07D00,stroke-width:1.5px,color:#12343B
 
     class Keycloak security
-    class Gateway,Eureka,Config infrastructure
+    class Gateway,Config,Eureka infra
     class Accounts,Loans,Cards,Message business
-    class Kafka messaging
-    class Alloy,Prometheus,Loki,Tempo,Grafana observability
+    class AccountsDB,LoansDB,CardsDB data
+    class Kafka data
 ```
+
+### Current Implementation Notes
+
+This project currently follows these implementation patterns:
+- Keycloak is used as the OAuth2 Authorization Server
+- Gateway Server acts as the JWT resource server
+- JWT roles are mapped from `realm_access.roles`
+- Gateway enforces route-level authorization:
+     - `/sammobank/accounts/**` => `ROLE_ACCOUNTS`
+     - `/sammobank/cards/**` => `ROLE_CARDS`
+     - `/sammobank/loans/**` => `ROLE_LOANS`
+
+- Kafka is the active asynchronous messaging implementation
+- Spring Cloud Stream is used for Kafka bindings and message processing
+- RabbitMQ remains as a historical comparison/reference and is not the active messaging layer in the codebase
 
 ### Core Components
 | Component | Responsibility |
@@ -125,21 +147,27 @@ These are the application ports used by the documented architecture. External po
 ### Request and Communication Flow
 1. The client authenticates with Keycloak and obtains an access token.
 2. The client sends API requests to Spring Cloud Gateway with the token.
-3. The gateway validates the JWT and routes requests to the appropriate business service.
-4. Eureka provides service discovery, while Config Server supplies external configuration.
-5. Services communicate synchronously where required and use Kafka for asynchronous messaging where configured.
-6. Each business service accesses its associated database.
-7. Observability components collect and visualize telemetry from the application and its infrastructure.
+3. The Gateway validates the JWT and checks the required role/authority.
+4. The Gateway routes the request to the correct business service.
+5. Eureka provides service discovery, while Config Server supplies external configuration.
+6. Services communicate synchronously where required and use Kafka for asynchronous messaging where configured.
+7. Each business service accesses its associated database.
+8. Observability components collect and visualize telemetry from the application and its infrastructure.
 
 ### Inter-Service Communication
 
-SammoBank uses OpenFeign for declarative HTTP communication between services. Eureka and Spring Cloud LoadBalancer support service discovery and instance selection.
+SammoBank uses 
+- OpenFeign for declarative HTTP communication between services
+- Eureka for service registration and discovery
+- Spring Cloud LoadBalancer for client-side service selection
+- Kafka for asynchronous messaging
 
 For example, the Accounts service can call the Loans and Cards services to retrieve related information and aggregate a customer-details response.
 
+This allows business services to remain loosely coupled while still integrating through controlled APIs and event streams.
 ## Microservices
 
-### SammoBank consists of three business microservices and four supporting infrastructure services. Each service is maintained as an independent Maven project with its own `pom.xml` and Maven Wrapper.
+SammoBank consists of three business microservices and four supporting infrastructure services. Each service is maintained as an independent Maven project with its own `pom.xml` and Maven Wrapper.
 
 ### Business Services
 | Service | Description |
@@ -294,7 +322,7 @@ Ensure the following tools are installed before setting up SammoBank locally.
 The Config Server retrieves application configuration from an external Git repository. Ensure that the repository is accessible and that any required credentials are configured before starting the application.
 
 - **Configuration repository:** [MICROSERVICES-CONFIG](https://github.com/SoyaChunkz/MICROSERVICES-CONFIG)
-- **Setup guide:** [Local Setup](docs/deployment/local-setup.md)
+- **Setup guide:** [Local Setup](docs/project-setup.md)
 
 ## Getting Started
 Follow these steps to start SammoBank using the default Docker Compose configuration.
@@ -496,7 +524,7 @@ The checkpoint advances only after the required pipeline stages succeed, helping
 
 ## Security
 
-SammoBank uses Keycloak and Spring Security to implement identity management and token-based security across the application.
+SammoBank uses Keycloak and Spring Security to implement token-based protection across the platform.
 
 ### Keycloak and OAuth 2.0
 Keycloak acts as the identity and access management provider. It supports authentication and token issuance using OAuth 2.0 and OpenID Connect (OIDC).
@@ -504,16 +532,20 @@ Keycloak acts as the identity and access management provider. It supports authen
 ### JWT-Based Security
 JSON Web Tokens (JWTs) are used to carry claims about an authenticated identity. The API gateway validates access tokens before routing protected requests to the appropriate services.
 
-### Security Components
-| Component | Responsibility |
-|---|---|
-| **Keycloak** | Identity management and access token issuance. |
-| **OAuth 2.0** | Authorization framework for obtaining and using access tokens. |
-| **OpenID Connect (OIDC)** | Identity layer built on OAuth 2.0. |
-| **JWT** | Carries signed claims used for token validation and authorization. |
-| **Spring Security** | Provides security integration within Spring applications. |
+The Gateway validates JWTs and enforces access rules using authorities derived from Keycloak roles. The actual realm in the imported configuration is sammobank, and the current Keycloak clients include:
+- sammobank-callcenter-ac
+- sammobank-callcenter-cc
 
-Detailed authentication flows, token validation, and security configuration are covered in the theory and deployment documentation.
+More detailed security flow documentation is available at [Keycloak Security](docs/keycloak-security.md).
+
+
+## Messaging
+
+SammoBank uses Kafka for asynchronous messaging in the current implementation. The messaging service consumes communication requests, processes email/SMS actions, and publishes result events back to Accounts.
+
+RabbitMQ is included in earlier project documentation as a historical comparison and design reference, but the active code path uses Kafka and Spring Cloud Stream.
+
+More detailed messaging flow documentation is available at [Messaging](docs/messaging.md).
 
 ## Observability
 
@@ -539,4 +571,4 @@ The observability stack supports:
 - Distributed tracing across instrumented services.
 - MySQL performance and health monitoring.
 
-Detailed setup instructions and configuration files will be documented in the deployment guides.
+---

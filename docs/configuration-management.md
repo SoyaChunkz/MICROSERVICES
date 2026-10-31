@@ -50,28 +50,64 @@ Spring Cloud Config has two main roles:
 In SammoBank, the Config Server uses an external Git repository as its configuration source.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'clusterBkg': '#EFFAFA',
+    'clusterBorder': '#78C9D2',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
+
 flowchart TB
     Git[("MICROSERVICES-CONFIG<br/>Git Repository")]
+    Config["CONFIG SERVER<br/>Port 8071"]
 
-    Config["Config Server<br/>Port 8071"]
-
-    subgraph Clients["Spring Boot Microservices"]
-        Accounts["Accounts"]
-        Loans["Loans"]
-        Cards["Cards"]
-        Gateway["Gateway Server"]
-        Eureka["Eureka Server"]
-        Message["Message Service"]
+    subgraph SammoBank["SAMMOBANK MICROSERVICES"]
+        direction TB
+        subgraph Platform["PLATFORM SERVICES"]
+            direction LR
+            Gateway["GATEWAY SERVER"]
+            Eureka["EUREKA SERVER"]
+            Message["MESSAGE SERVICE"]
+        end
+        subgraph Business["BUSINESS SERVICES"]
+            direction LR
+            Accounts["ACCOUNTS SERVICE"]
+            Loans["LOANS SERVICE"]
+            Cards["CARDS SERVICE"]
+        end
     end
 
-    Git -->|"Retrieve configuration"| Config
+    Git -->|"Fetches configuration"| Config
+    Config -->|"Configuration"| Gateway
+    Config -->|"Configuration"| Eureka
+    Config -->|"Configuration"| Message
+    Config -->|"Configuration"| Accounts
+    Config -->|"Configuration"| Loans
+    Config -->|"Configuration"| Cards
 
-    Config --> Accounts
-    Config --> Loans
-    Config --> Cards
-    Config --> Gateway
-    Config --> Eureka
-    Config --> Message
+    classDef repository fill:#BCE8ED,stroke:#168A9B,stroke-width:2px,color:#12343B
+    classDef config fill:#168A9B,stroke:#086477,stroke-width:2px,color:#FFFFFF
+    classDef platform fill:#DDF3F5,stroke:#168A9B,stroke-width:1.5px,color:#12343B
+    classDef business fill:#EFFAFA,stroke:#42AAB8,stroke-width:1.5px,color:#12343B
+
+    class Git repository
+    class Config config
+    class Gateway,Eureka,Message platform
+    class Accounts,Loans,Cards business
+
+    style SammoBank fill:#FFFFFF,stroke:#168A9B,stroke-width:2px
+    style Platform fill:#E6F7F8,stroke:#78C9D2,stroke-width:1px
+    style Business fill:#F4FBFB,stroke:#78C9D2,stroke-width:1px
+
+    linkStyle default stroke:#168A9B,stroke-width:1.5px,color:#12343B
 ```
 
 The diagram represents the intended configuration architecture. The exact set of Config Clients depends on each application's current configuration.
@@ -121,16 +157,54 @@ A service must have the appropriate Config Client dependency and bootstrap confi
 A typical startup flow looks like this:
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#DDF3F5',
+    'primaryTextColor': '#12343B',
+    'primaryBorderColor': '#168A9B',
+    'lineColor': '#168A9B',
+    'secondaryColor': '#BCE8ED',
+    'tertiaryColor': '#EFFAFA',
+    'actorBkg': '#DDF3F5',
+    'actorBorder': '#168A9B',
+    'actorTextColor': '#12343B',
+    'actorLineColor': '#168A9B',
+    'signalColor': '#168A9B',
+    'signalTextColor': '#12343B',
+    'labelBoxBkgColor': '#BCE8ED',
+    'labelBoxBorderColor': '#168A9B',
+    'labelTextColor': '#12343B',
+    'loopTextColor': '#12343B',
+    'activationBkgColor': '#BCE8ED',
+    'activationBorderColor': '#168A9B',
+    'sequenceNumberColor': '#FFFFFF',
+    'fontFamily': 'Arial, sans-serif'
+  }
+}}%%
+
 sequenceDiagram
+    autonumber
+
     participant App as Spring Boot Service
     participant Config as Config Server
     participant Git as Configuration Git Repository
 
     App->>Config: Request configuration for application and profile
+    activate Config
+
     Config->>Git: Retrieve configuration if needed
+    activate Git
+
     Git-->>Config: Configuration files
+    deactivate Git
+
     Config-->>App: Resolved configuration
+    deactivate Config
+
+    activate App
     App->>App: Initialize application with configuration
+    deactivate App
 ```
 
 The precise loading behavior depends on the Spring Cloud Config version and client configuration. For example, some setups use Config Data imports, while older configurations may use a bootstrap context.
@@ -308,10 +382,3 @@ Check the resolved configuration for the relevant endpoint, port, credentials, a
 Ensure that the service is using the correct connection details for IntelliJ, Docker Compose, or Kubernetes.
 
 ---
-
-## Related Documentation
-
-- [Project Setup](project-setup.md)
-- [Keycloak Security](keycloak-security.md)
-- [Messaging](messaging.md)
-- [Service Discovery and Gateway](service-discovery-gateway.md)
