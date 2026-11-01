@@ -575,3 +575,5 @@ The observability stack supports:
 - MySQL performance and health monitoring.
 
 ---
+
+<!-- adding this comment to check CODEOWNERS approval when a PR is raised -->
