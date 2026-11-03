@@ -76,6 +76,7 @@ jobs:
       message: ${{ steps.changes.outputs.message }}
       application_changed: ${{ steps.changes.outputs.application_changed }}
       shared_base_changed: ${{ steps.changes.outputs.shared_base_changed }}
+      shared_parent_changed: ${{ steps.changes.outputs.shared_parent_changed }}
 
     steps:
       # Download the complete Git history so we can compare commits.
@@ -122,6 +123,7 @@ jobs:
 
             echo "application_changed=true" >> "$GITHUB_OUTPUT"
             echo "shared_base_changed=true" >> "$GITHUB_OUTPUT"
+            echo "shared_parent_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -140,10 +142,16 @@ jobs:
           # Every service must be rebuilt if it did.
           # ----------------------------------------------------
           SHARED_BASE_CHANGED=false
+          SHARED_PARENT_CHANGED=false
           APPLICATION_CHANGED=false
 
           if grep -q '^docker/java25-curl/' <<< "$CHANGED_FILES"; then
             SHARED_BASE_CHANGED=true
+            APPLICATION_CHANGED=true
+          fi
+
+          if grep -q '^sammobank-bom/' <<< "$CHANGED_FILES"; then
+            SHARED_PARENT_CHANGED=true
             APPLICATION_CHANGED=true
           fi
 
@@ -153,6 +161,7 @@ jobs:
           for service in "${SERVICES[@]}"; do
 
             if [[ "$SHARED_BASE_CHANGED" == "true" ]] ||
+               [[ "$SHARED_PARENT_CHANGED" == "true" ]] ||
                grep -q "^${service}/" <<< "$CHANGED_FILES"; then
 
               echo "${service}=true" >> "$GITHUB_OUTPUT"
@@ -169,6 +178,7 @@ jobs:
           # Tell downstream jobs whether any service needs publishing.
           echo "application_changed=${APPLICATION_CHANGED}" >> "$GITHUB_OUTPUT"
           echo "shared_base_changed=${SHARED_BASE_CHANGED}" >> "$GITHUB_OUTPUT"
+          echo "shared_parent_changed=${SHARED_PARENT_CHANGED}" >> "$GITHUB_OUTPUT"
 
           echo "Files changed since the last successful publish:"
           printf '%s\n' "$CHANGED_FILES"
@@ -226,7 +236,9 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: ${{ matrix.service }}/pom.xml
+          cache-dependency-path: |
+            ${{ matrix.service }}/pom.xml
+            sammobank-bom/pom.xml
 
       # Linux runners require the Maven Wrapper script to be executable.
       - name: Make Maven Wrapper executable
@@ -306,7 +318,9 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: ${{ matrix.service }}/pom.xml
+          cache-dependency-path: |
+            ${{ matrix.service }}/pom.xml
+            sammobank-bom/pom.xml
 
       # Make the wrapper executable only for services being published.
       - name: Make Maven Wrapper executable

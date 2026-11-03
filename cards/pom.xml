@@ -3,36 +3,21 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>com.sammo</groupId>
+        <artifactId>sammobank-bom</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../sammobank-bom/pom.xml</relativePath>
     </parent>
+
     <groupId>com.sammo</groupId>
     <artifactId>cards</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>cards</name>
     <description>Microservice for Cards</description>
-    <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
-    <properties>
-        <java.version>25</java.version>
-        <spring-cloud.version>2025.1.2</spring-cloud.version>
-        <otelVersion>2.22.0</otelVersion>
-    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -41,7 +26,6 @@
         <dependency>
             <groupId>io.opentelemetry.javaagent</groupId>
             <artifactId>opentelemetry-javaagent</artifactId>
-            <version>${otelVersion}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -95,7 +79,6 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.8.14</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -123,100 +106,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
-            <!-- ============================================================
-                Steps to build and run this Spring Boot application
-                using Google Jib
-
-                1. Build the Docker image
-                mvn clean install
-                mvn  jib:dockerBuild
-
-                mvn compile jib:dockerBuild //skips tests
-
-                2. Verify the image
-                docker images
-
-                3. (Optional) Inspect the image
-                docker inspect soyachunkz/cards:latest
-
-                4. Run a container
-                docker run -d -p 8080:9000 soyachunkz/cards
-
-                5. Verify the running container
-                docker ps
-
-                6. View application logs
-                docker logs name
-
-                7. Stop the container
-                docker stop name
-
-                8. Remove the container
-                docker rm name
-
-                9. Remove the image
-                docker rmi soyachunkz/cards:latest
-
-                Note:
-                - Jib does NOT require a Dockerfile.
-                - Jib analyzes the Maven project, identifies the main class,
-                creates optimized OCI image layers, and builds the image
-                directly into the local Docker daemon.
-            ============================================================= -->
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-                <version>3.5.2</version>
-                <configuration>
-                    <from>
-                        <image>registry://soyachunkz/java25-curl:latest</image>
-                    </from>
-                    <to>
-                        <image>soyachunkz/${project.artifactId}:latest</image>
-                    </to>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
 </project>
