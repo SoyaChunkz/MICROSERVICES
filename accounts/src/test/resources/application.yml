@@ -5,7 +5,12 @@ spring:
   config:
     import: "optional:configserver:http://localhost:8071/"
 
+  cloud:
+    stream:
+      default-binder: integration
+
 eureka:
   client:
+    enabled: false
     serviceUrl:
       defaultZone: http://localhost:8070/eureka/
